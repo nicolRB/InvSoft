@@ -4,3 +4,4 @@ domínio de problemas:
 - Lista de comprar/pendência de items que precisam ser obtidos
 - HTML e CSS para front-end
 - javascript e node para back-end
+- supertest para testes do software
