@@ -1,3 +1,7 @@
+Equipe:
+- Nicolas Borges
+- Gabriel da Silva
+
 domínio de problemas:
 - Listagem de inventário com nome de item, modelo, marca, código universal e quantidade
 - Criação de listas e grupos de listas separadas
