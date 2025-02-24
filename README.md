@@ -10,3 +10,4 @@ domínio de problemas:
 - HTML e CSS para front-end
 - javascript e node para back-end
 - Jest para testes do software
+- MySQL para banco de dados
