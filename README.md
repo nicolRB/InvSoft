@@ -11,3 +11,29 @@ domínio de problemas:
 - javascript e node para back-end
 - Jest para testes do software
 - MySQL para banco de dados
+
+Requisitos Funcionais:
+- Armazenenamento de informações inseridas
+- Método de controle de dados
+- Função de registro e login de conta
+- Criação, gerenciamento e configuração de listas e pastas de listas
+- Funções extras que podem ser aplicadas a listas como rastreamento de depreciação.
+
+Requisitos Não-Funcionais:
+- Token JWT para proteção de senhas.
+- Registro de inserção, deleção ou alteração de dados não deve demorar mais que 200 ms.
+- O JWT deve expirar em um tempo configurável e ser renovável por refresh tokens seguros.
+- O tempo de resposta da API deve ser inferior a 500ms para consultas simples.
+- O sistema deve suportar no mínimo 1000 requisições simultâneas sem degradação significativa.
+- Operações críticas como listagem e busca devem ser otimizadas com índices no MySQL.
+- O software deve ser feito para desktop.
+- A navegação deve ser simples e compreensível
+- Deve haver um sistema de backup automático do banco de dados.
+
+Estratégia e planejamento:
+- Sera usada a estratégia de arquitetura MVC, devido à sua simplicidade, conveniênvia e efetividade.
+- HTML, CSS, Javascript, Node e MySQL serão usados por questão de afinidade e simplicidade.
+- Jest sera usado por funcionar com Node e por ser fácil de configurar.
+- A dupla trabalhará em conjunto para desenvolver todas as áreas do projeto.
+- Plnaejamento será iniciado com Figma para o Front-end antes de ser feito a programação oficial, seguido do planejamento do banco de dados usando diagramas de classes.
+- Após o planejamento ser finalizado, sera iniciado a programação do Front-end, junto da criação do banco de dados, sendo feito um display simples junto com o back-end necessário para poder manipular os dados a partir da interface de usuário antes os outros sistemas como registro e login de usuário e rastreamento de depreciação.
