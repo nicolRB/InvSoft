@@ -13,11 +13,11 @@ domínio de problemas:
 - MySQL para banco de dados
 
 Requisitos Funcionais:
-- Armazenenamento de informações inseridas
-- Método de controle de dados
-- Função de registro e login de conta
-- Criação, gerenciamento e configuração de listas e pastas de listas
-- Funções extras que podem ser aplicadas a listas como rastreamento de depreciação.
+- O software deve poder armazenar informações inseridas pelo usuário em um banco de dados
+- O software deve permitir o usuário a ver os dados armazenados de suas listas e poder alterá-los
+- O software deve permitir o usuário a criar uma conta, armazenar os dados de diferentes contas e logar em uma conta com senha
+- O software deve permitir criação, gerenciamento e configuração de listas e pastas de listas
+- O software deve ter uma função de rastreamento de depreciação que pode ser configurada e aplicada à listas do usuário.
 
 Requisitos Não-Funcionais:
 - Token JWT para proteção de senhas.
