@@ -38,4 +38,8 @@ Estratégia e planejamento:
 - Plnaejamento será iniciado com Figma para o Front-end antes de ser feito a programação oficial, seguido do planejamento do banco de dados usando diagramas de classes.
 - Após o planejamento ser finalizado, sera iniciado a programação do Front-end, junto da criação do banco de dados, sendo feito um display simples junto com o back-end necessário para poder manipular os dados a partir da interface de usuário antes os outros sistemas como registro e login de usuário e rastreamento de depreciação.
 
+Ambiente de desenvolvimento: 
+- Visual Studio Code
+- XAMPP SHELL
+
 Projeto Front-End Figma: https://www.figma.com/design/ebI8Var1XVYdzzdDPviU3H/InvSoft?node-id=0-1&t=cgpA5Q8kWBlp7Zlz-1
