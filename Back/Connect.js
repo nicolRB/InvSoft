@@ -480,6 +480,49 @@ app.post('/updateData', authenticateToken, (req, res) => {
     });
 });
 
+app.put('/updateListName', authenticateToken, (req, res) => {
+    const { id, nome } = req.body;
+
+    if (!id || !nome) {
+        return res.status(400).json({ success: false, message: 'ID e novo nome são obrigatórios' });
+    }
+
+    connection.query(
+        'UPDATE Lista SET Nome_Lista = ? WHERE Id_Lista = ? AND Conta = ?',
+        [nome, id, req.user.id],
+        (err, results) => {
+            if (err) {
+                console.error('Erro no UPDATE:', err);
+                return res.status(500).json({ success: false, message: 'Erro ao atualizar lista' });
+            }
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'Lista não encontrada ou sem permissão' });
+            }
+            res.json({ success: true, message: 'Lista atualizada com sucesso' });
+        }
+    );
+});
+
+app.delete('/deleteList', authenticateToken, (req, res) => {
+    const { id } = req.body;
+
+    connection.query(
+        'DELETE FROM Lista WHERE Id_Lista = ?',
+        [id],
+        (err, results) => {
+            if (err) {
+                console.error('Erro no DELETE:', err);
+                return res.status(500).json({ success: false, message: 'Erro ao apagar a lista' });
+            }
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'Lista não encontrada ou sem permissão' });
+            }
+            res.json({ success: true, message: 'Lista apagada com sucesso' });
+        }
+    );
+});
+
+
 process.on('SIGINT', () => {
     console.log('\nEncerrando...');
     connection.end();

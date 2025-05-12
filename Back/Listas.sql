@@ -20,8 +20,6 @@
 --
 
 DROP TABLE IF EXISTS `coluna`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `coluna` (
   `Id_Coluna` int(11) NOT NULL AUTO_INCREMENT,
   `Nome_Coluna` varchar(30) NOT NULL,
@@ -29,6 +27,8 @@ CREATE TABLE `coluna` (
   PRIMARY KEY (`Id_Coluna`),
   KEY `Lista` (`Lista`),
   CONSTRAINT `coluna_ibfk_1` FOREIGN KEY (`Lista`) REFERENCES `lista` (`Id_Lista`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -97,8 +97,6 @@ UNLOCK TABLES;
 --
 
 DROP TABLE IF EXISTS `info`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `info` (
   `Id_Info` int(11) NOT NULL AUTO_INCREMENT,
   `Dados` varchar(500) DEFAULT NULL,
@@ -107,8 +105,12 @@ CREATE TABLE `info` (
   PRIMARY KEY (`Id_Info`),
   KEY `Lin` (`Lin`),
   KEY `Col` (`Col`),
-  CONSTRAINT `info_ibfk_1` FOREIGN KEY (`Lin`) REFERENCES `linha` (`Id_Linha`),
+  CONSTRAINT `info_ibfk_1` FOREIGN KEY (`Lin`) REFERENCES `linha` (`Id_Linha`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `info_ibfk_2` FOREIGN KEY (`Col`) REFERENCES `coluna` (`Id_Coluna`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -126,9 +128,7 @@ UNLOCK TABLES;
 -- Table structure for table `linha`
 --
 
-DROP TABLE IF EXISTS `linha`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+DDROP TABLE IF EXISTS `linha`;
 CREATE TABLE `linha` (
   `Id_Linha` int(11) NOT NULL AUTO_INCREMENT,
   `Num` int(11) NOT NULL,
@@ -136,6 +136,8 @@ CREATE TABLE `linha` (
   PRIMARY KEY (`Id_Linha`),
   KEY `Lista` (`Lista`),
   CONSTRAINT `linha_ibfk_1` FOREIGN KEY (`Lista`) REFERENCES `lista` (`Id_Lista`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -177,8 +179,6 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `lista`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `lista` (
   `Id_Lista` int(11) NOT NULL AUTO_INCREMENT,
   `Nome_Lista` varchar(30) NOT NULL,
@@ -186,6 +186,8 @@ CREATE TABLE `lista` (
   PRIMARY KEY (`Id_Lista`),
   KEY `Pasta` (`Pasta`),
   CONSTRAINT `lista_ibfk_1` FOREIGN KEY (`Pasta`) REFERENCES `pasta` (`Id_Pasta`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -231,8 +233,6 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `pasta`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `pasta` (
   `Id_Pasta` int(11) NOT NULL AUTO_INCREMENT,
   `Nome_Pasta` varchar(30) NOT NULL,
