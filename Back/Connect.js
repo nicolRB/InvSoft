@@ -7,12 +7,11 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');    
 const open = (...args) => import('open').then(mod => mod.default(...args));
 
-// Create a connection to the database
+// Create a connection to MySQL (without specifying the database for now)
 const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'Listas'
+  host: 'localhost',
+  user: 'root',
+  password: ''
 });
 
 // Set up the terminal interface for user input
@@ -21,16 +20,53 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
-// Connect to the MySQL database
 connection.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL: ' + err.stack);
+    return;
+  }
+
+  console.log('Connected as ID ' + connection.threadId);
+
+  // Check if the database exists
+  connection.query('SHOW DATABASES LIKE "Listas"', (err, result) => {
     if (err) {
-        console.error('Erro para conectar: ' + err.stack);
-        return;
+      console.error('Error checking database: ' + err.stack);
+      return;
     }
-    console.log('Conectado como ID ' + connection.threadId);
-    
-    // Now that the connection is established, show the menu
-    showMenu();
+
+    if (result.length === 0) {
+      console.log('Database does not exist. Creating database...');
+
+      // Create the database
+      connection.query('CREATE DATABASE Listas', (err) => {
+        if (err) {
+          console.error('Error creating database: ' + err.stack);
+          return;
+        }
+        console.log('Database "Listas" created.');
+        // After creating the database, close the initial connection and reconnect with the new database
+        connection.changeUser({ database: 'Listas' }, (err) => {
+          if (err) {
+            console.error('Error selecting database: ' + err.stack);
+            return;
+          }
+          console.log('Connected to the "Listas" database');
+          showMenu();
+        });
+      });
+    } else {
+      // If the database exists, just select it
+      connection.changeUser({ database: 'Listas' }, (err) => {
+        if (err) {
+          console.error('Error selecting database: ' + err.stack);
+          return;
+        }
+        console.log('Connected to the "Listas" database');
+        showMenu();
+      });
+    }
+  });
 });
 
 open(`http://localhost:${port}`);
