@@ -33,4 +33,40 @@ tr:hover td {
     height: 16px;
     margin-left: 6px;
     vertical-align: middle;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.edit-icon:hover {
+    transform: scale(1.2); /* Hover effect */
+}
+
+.add-icon {
+    width: 30px;
+    height: 30px;
+}
+
+.add-icon:hover {
+    transform: scale(1.2); /* Hover effect */
+}
+
+.no-border {
+    border: none !important;
+    background: transparent !important;
+}
+
+.add-icon {
+    width: 30px;
+    height: 30px;
+    background-color: #ffffff; /* Choose the color you want for the background */
+    border-radius: 50%; /* Make the background round */
+    padding: 5px; /* Add padding for better spacing inside the circle */
+    display: inline-block; /* Ensure the background is applied properly */
+    cursor: pointer;
+    opacity: 0.8;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.add-icon:hover {
+    transform: scale(1.2);
+    opacity: 1;
 }

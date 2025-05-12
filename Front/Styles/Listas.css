@@ -31,11 +31,16 @@
     overflow: hidden;
     background-color: white;
     border-radius: 30%;
+    transition: transform 0.2s;
 }
 
 #add img{
     height: 100%;
     object-fit: cover;
+}
+
+#add:hover{
+    transform: scale(1.1);
 }
 
 #listas-container {
@@ -67,6 +72,10 @@
     transition: transform 0.2s ease; /* Smooth hover effect */
 }
 
+.lista-item:hover{
+    transform: scale(1.1);
+}
+
 .edit-icon {
     width: 24px;
     height: 24px;
@@ -77,5 +86,18 @@
 }
 
 .edit-icon:hover {
+    transform: scale(1.2); /* Hover effect */
+}
+
+.delete-icon {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    margin-left: 10px; /* Space between the button and the icon */
+    transition: transform 0.2s ease;
+    align-self: center; /* Vertically center the icon */
+}
+
+.delete-icon:hover {
     transform: scale(1.2); /* Hover effect */
 }

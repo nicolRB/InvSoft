@@ -4,34 +4,132 @@ const readline = require('readline');
 const app = express();
 const port = 3000;
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');    
+const jwt = require('jsonwebtoken');
 const open = (...args) => import('open').then(mod => mod.default(...args));
 
-// Create a connection to the database
+// Create a connection to MySQL (without specifying the database for now)
 const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'Listas'
+  host: 'localhost',
+  user: 'root',
+  password: ''
 });
 
 // Set up the terminal interface for user input
 const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
+  input: process.stdin,
+  output: process.stdout
 });
 
-// Connect to the MySQL database
 connection.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL: ' + err.stack);
+    return;
+  }
+
+  console.log('Connected as ID ' + connection.threadId);
+
+  // Check if the database exists
+  connection.query('SHOW DATABASES LIKE "Listas"', (err, result) => {
     if (err) {
-        console.error('Erro para conectar: ' + err.stack);
-        return;
+      console.error('Error checking database: ' + err.stack);
+      return;
     }
-    console.log('Conectado como ID ' + connection.threadId);
-    
-    // Now that the connection is established, show the menu
-    showMenu();
+
+    if (result.length === 0) {
+      console.log('Database does not exist. Creating database...');
+      
+      // Create the database
+      connection.query('CREATE DATABASE Listas', (err) => {
+        if (err) {
+          console.error('Error creating database: ' + err.stack);
+          return;
+        }
+        console.log('Database "Listas" created.');
+        // After creating the database, close the initial connection and reconnect with the new database
+        connection.changeUser({ database: 'Listas' }, (err) => {
+          if (err) {
+            console.error('Error selecting database: ' + err.stack);
+            return;
+          }
+          console.log('Connected to the "Listas" database');
+          ensureTablesExist(); // Check and create tables if necessary
+        });
+      });
+    } else {
+      // If the database exists, just select it
+      connection.changeUser({ database: 'Listas' }, (err) => {
+        if (err) {
+          console.error('Error selecting database: ' + err.stack);
+          return;
+        }
+        console.log('Connected to the "Listas" database');
+        ensureTablesExist(); // Check and create tables if necessary
+      });
+    }
+  });
 });
+
+function ensureTablesExist() {
+  const tables = [
+    {
+      name: 'Conta',
+      createQuery: `CREATE TABLE IF NOT EXISTS Conta (
+        ID_Conta INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) NOT NULL UNIQUE,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL
+      )`
+    },
+    {
+      name: 'Lista',
+      createQuery: `CREATE TABLE IF NOT EXISTS Lista (
+        Id_Lista INT AUTO_INCREMENT PRIMARY KEY,
+        Nome_Lista VARCHAR(255) NOT NULL,
+        Conta INT,
+        FOREIGN KEY (Conta) REFERENCES Conta(ID_Conta)
+      )`
+    },
+    {
+      name: 'Linha',
+      createQuery: `CREATE TABLE IF NOT EXISTS Linha (
+        Id_Linha INT AUTO_INCREMENT PRIMARY KEY,
+        Lista INT,
+        Num INT NOT NULL,
+        FOREIGN KEY (Lista) REFERENCES Lista(Id_Lista)
+      )`
+    },
+    {
+      name: 'Coluna',
+      createQuery: `CREATE TABLE IF NOT EXISTS Coluna (
+        Id_Coluna INT AUTO_INCREMENT PRIMARY KEY,
+        Lista INT,
+        Nome_Coluna VARCHAR(255) NOT NULL,
+        FOREIGN KEY (Lista) REFERENCES Lista(Id_Lista)
+      )`
+    },
+    {
+      name: 'Info',
+      createQuery: `CREATE TABLE IF NOT EXISTS Info (
+        Id_Info INT AUTO_INCREMENT PRIMARY KEY,
+        Lin INT,
+        Col INT,
+        Dados TEXT,
+        FOREIGN KEY (Lin) REFERENCES Linha(Id_Linha),
+        FOREIGN KEY (Col) REFERENCES Coluna(Id_Coluna)
+      )`
+    }
+  ];
+
+  tables.forEach(table => {
+    connection.query(table.createQuery, (err) => {
+      if (err) {
+        console.error(`Error creating table ${table.name}: ${err.stack}`);
+        return;
+      }
+      console.log(`Table ${table.name} is ready.`);
+    });
+  });
+}
 
 open(`http://localhost:${port}`);
 
@@ -479,6 +577,49 @@ app.post('/updateData', authenticateToken, (req, res) => {
         res.json({ success: true, message: 'Dado atualizado com sucesso' });
     });
 });
+
+app.put('/updateListName', authenticateToken, (req, res) => {
+    const { id, nome } = req.body;
+
+    if (!id || !nome) {
+        return res.status(400).json({ success: false, message: 'ID e novo nome são obrigatórios' });
+    }
+
+    connection.query(
+        'UPDATE Lista SET Nome_Lista = ? WHERE Id_Lista = ? AND Conta = ?',
+        [nome, id, req.user.id],
+        (err, results) => {
+            if (err) {
+                console.error('Erro no UPDATE:', err);
+                return res.status(500).json({ success: false, message: 'Erro ao atualizar lista' });
+            }
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'Lista não encontrada ou sem permissão' });
+            }
+            res.json({ success: true, message: 'Lista atualizada com sucesso' });
+        }
+    );
+});
+
+app.delete('/deleteList', authenticateToken, (req, res) => {
+    const { id } = req.body;
+
+    connection.query(
+        'DELETE FROM Lista WHERE Id_Lista = ?',
+        [id],
+        (err, results) => {
+            if (err) {
+                console.error('Erro no DELETE:', err);
+                return res.status(500).json({ success: false, message: 'Erro ao apagar a lista' });
+            }
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'Lista não encontrada ou sem permissão' });
+            }
+            res.json({ success: true, message: 'Lista apagada com sucesso' });
+        }
+    );
+});
+
 
 process.on('SIGINT', () => {
     console.log('\nEncerrando...');
