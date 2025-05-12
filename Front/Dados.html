@@ -12,23 +12,13 @@
     <a href="javascript:history.back();"><img src="img/return.png" alt="return" class="return"></a>
     <h1></h1>
     <div id="table-container"></div> <!-- Container to hold the table -->
-
-    <!-- Modal for editing data -->
-    <div id="edit-modal" style="display:none;">
-        <input type="text" id="edit-input" />
-        <button onclick="saveEdit()">Save</button>
-        <button onclick="closeModal()">Cancel</button>
-    </div>
 </body>
 
 <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const listaId = urlParams.get('lista'); // Get the 'lista' ID from the URL
-
-    let currentCellId = null;  // Variable to hold the current cell ID to edit
+    const listaId = urlParams.get('lista');
 
     if (listaId) {
-        // Add the token to the request header
         fetch(`/getListName?lista=${encodeURIComponent(listaId)}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -47,7 +37,6 @@
         })
         .catch(error => console.error('Erro ao carregar nome da lista:', error));
 
-        // Fetch the list data
         fetch(`/getListData?lista=${encodeURIComponent(listaId)}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -63,22 +52,31 @@
             const colunas = [...new Set(data.map(item => item.Nome_Coluna))].sort();
             const linhas = [...new Set(data.map(item => item.Linha))].sort((a, b) => a - b);
 
+            // Create table element
             const table = document.createElement('table');
             table.classList.add('tabela');
 
-            // Header Row
+            // Header row
             const headerRow = document.createElement('tr');
-            headerRow.innerHTML = `<th></th>`; 
-
+            headerRow.innerHTML = `<th></th>`;
             colunas.forEach(col => {
                 const th = document.createElement('th');
                 th.textContent = col;
                 headerRow.appendChild(th);
             });
+            
+            const thAddColumn = document.createElement('th');
+            thAddColumn.classList.add('no-border');
+            const addColImg = document.createElement('img');
+            addColImg.src = 'img/add.png';
+            addColImg.alt = 'add column';
+            addColImg.classList.add('add-icon');
+            thAddColumn.appendChild(addColImg);
+            headerRow.appendChild(thAddColumn);
 
             table.appendChild(headerRow);
 
-            // Data Rows
+            // Data rows
             linhas.forEach(ln => {
                 const row = document.createElement('tr');
                 const rowHeader = document.createElement('th');
@@ -89,75 +87,76 @@
                     const cell = document.createElement('td');
                     const found = data.find(item => item.Linha === ln && item.Nome_Coluna === coluna);
                     if (found) {
-                        console.log('found:', found); // Adicione isso para ver o conteúdo completo
-
                         const span = document.createElement('span');
                         span.textContent = found.Dados;
 
-                        const img = document.createElement('img');
-                        img.src = 'img/edit.png';
-                        img.alt = 'edit';
-                        img.classList.add('edit-icon');
-                        img.setAttribute('data-id', found.Id_Info);  // <-- Aqui pode estar o problema
-                        img.onclick = openEditModal;
+                        const editImg = document.createElement('img');
+                        editImg.src = 'img/edit.png';
+                        editImg.alt = 'edit';
+                        editImg.classList.add('edit-icon');
+                        editImg.onclick = () => {
+                            const newValue = prompt("Edit value:", span.textContent);
+                            if (newValue !== null) {
+                                fetch(`/updateData`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        id: found.Id_Info,
+                                        newData: newValue
+                                    })
+                                })
+                                .then(res => res.json())
+                                .then(result => {
+                                    if (result.success) {
+                                        span.textContent = newValue;
+                                    } else {
+                                        alert('Error updating data.');
+                                    }
+                                })
+                                .catch(error => console.error('Error saving data:', error));
+                            }
+                        };
 
                         cell.appendChild(span);
-                        cell.appendChild(img);
+                        cell.appendChild(editImg);
                     }
-
                     row.appendChild(cell);
                 });
 
                 table.appendChild(row);
             });
 
+            // Add-row footer with a single icon (bottom-left)
+            const addRowFooter = document.createElement('tr');
+
+            // Add a single <th> cell with no border, containing the add row icon
+            const thAddRow = document.createElement('th');
+            thAddRow.classList.add('no-border');
+
+            const addRowImg = document.createElement('img');
+            addRowImg.src = 'img/add.png';
+            addRowImg.alt = 'add row';
+            addRowImg.classList.add('add-icon');
+
+            thAddRow.appendChild(addRowImg);
+            addRowFooter.appendChild(thAddRow);
+
+            // Add empty <th> to align with column count
+            for (let i = 0; i < colunas.length; i++) {
+                const emptyTh = document.createElement('th');
+                emptyTh.classList.add('no-border');
+                addRowFooter.appendChild(emptyTh);
+            }
+
+            table.appendChild(addRowFooter);
+
+
             document.getElementById("table-container").appendChild(table);
         })
         .catch(error => console.error('Erro ao carregar dados da lista:', error));
-    }
-
-    // Function to open the edit modal
-    function openEditModal(event) {
-        currentCellId = event.target.getAttribute('data-id');  // Get the ID of the cell to edit
-        const cellData = event.target.previousElementSibling.textContent; // Get the current data from the cell
-        document.getElementById('edit-input').value = cellData; // Set the input field with current data
-        document.getElementById('edit-modal').style.display = 'block';  // Show the modal
-    }
-
-    // Function to save the edited value
-    function saveEdit() {
-        const newValue = document.getElementById('edit-input').value;
-        console.log('Saving new value:', newValue);
-
-        fetch(`/updateData`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                id: currentCellId,
-                newData: newValue
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Data updated successfully');
-                location.reload();  // Reload the page to see the updated data
-            } else {
-                alert('Error updating data');
-            }
-        })
-        .catch(error => console.error('Error saving data:', error));
-
-        closeModal();
-    }
-
-
-    // Function to close the edit modal
-    function closeModal() {
-        document.getElementById('edit-modal').style.display = 'none';
     }
 </script>
 </html>

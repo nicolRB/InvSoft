@@ -72,13 +72,63 @@
                 editIcon.alt = 'Edit';
                 editIcon.classList.add('edit-icon');
                 editIcon.onclick = (event) => {
-                    event.stopPropagation(); // Prevent list click
-                    alert(`Edit clicked for list ${lista.Id_Lista}`);
-                    // Here you can open a modal or redirect to edit
+                    event.stopPropagation(); // Evita abrir a lista
+                    const novoNome = prompt("Digite o novo nome para a lista:", lista.Nome_Lista);
+                    if (!novoNome) return;
+
+                    fetch(`/updateListName`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem('token')
+                        },
+                        body: JSON.stringify({ id: lista.Id_Lista, nome: novoNome })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert("Lista atualizada com sucesso!");
+                            fetchListas(ID_Conta); // Recarrega as listas
+                        } else {
+                            alert("Erro ao atualizar: " + data.message);
+                        }
+                    })
+                    .catch(error => console.error('Erro ao atualizar a lista:', error));
                 };
+
+                const deleteIcon = document.createElement('img');
+                deleteIcon.src = 'img/delete.png';
+                deleteIcon.alt = 'Delete';
+                deleteIcon.classList.add('delete-icon');
+                deleteIcon.onclick = (event) => {
+                    event.stopPropagation(); // Prevent navigation
+                    const confirmDelete = confirm(`Tem certeza que deseja excluir a lista "${lista.Nome_Lista}"?`);
+                    if (!confirmDelete) return;
+
+                    fetch(`/deleteList`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem('token')
+                        },
+                        body: JSON.stringify({ id: lista.Id_Lista })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert("Lista excluída com sucesso!");
+                            fetchListas(ID_Conta); // Recarrega as listas
+                        } else {
+                            alert("Erro ao excluir: " + data.message);
+                        }
+                    })
+                    .catch(error => console.error('Erro ao excluir a lista:', error));
+                };
+
 
                 wrapper.appendChild(div);
                 wrapper.appendChild(editIcon);
+                wrapper.appendChild(deleteIcon);
                 container.appendChild(wrapper);
             });
         })
