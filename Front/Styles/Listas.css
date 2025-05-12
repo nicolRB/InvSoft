@@ -1,0 +1,81 @@
+#HomeCircle{
+    height: 70px;
+    width: 70px;
+    border-radius: 50%;
+    background-color: rgb(33, 33, 33);
+    padding: 10px;
+    overflow: hidden;
+    box-sizing: border-box;
+    border-color: white;
+    border-width: 4px;
+    border-style: solid;
+}
+
+#HomeCircle img{
+    height: 100%;
+    object-fit: cover;
+}
+
+#titulo{
+    font-size: 40px;
+    color: white;
+}
+
+#add{
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    height: 70px;
+    width: 70px;
+    padding: 5px;
+    overflow: hidden;
+    background-color: white;
+    border-radius: 30%;
+}
+
+#add img{
+    height: 100%;
+    object-fit: cover;
+}
+
+#listas-container {
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    align-items: center; /* Center items horizontally */
+    justify-content: center; /* Center items vertically */
+    width: 100%;
+}
+
+.lista-wrapper {
+    display: flex;
+    align-items: center; /* Vertically center the content */
+    justify-content: space-between; /* Space between the list item and edit icon */
+    width: 300px; /* Fixed width for the wrapper */
+    margin: 10px 0;
+}
+
+.lista-item {
+    flex-grow: 1; /* Make the list item expand to take available space */
+    background-color: #565656; /* Light grey background */
+    color: white; /* White text */
+    padding: 15px; /* Add padding inside the item */
+    margin: 0; /* Remove margin */
+    border-radius: 12px; /* Rounded corners */
+    font-size: 18px; /* Font size */
+    text-align: center; /* Center the text */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Slight shadow */
+    transition: transform 0.2s ease; /* Smooth hover effect */
+}
+
+.edit-icon {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    margin-left: 10px; /* Space between the button and the icon */
+    transition: transform 0.2s ease;
+    align-self: center; /* Vertically center the icon */
+}
+
+.edit-icon:hover {
+    transform: scale(1.2); /* Hover effect */
+}

@@ -1,0 +1,30 @@
+body {
+    background-color: #313438;
+    padding: 0%;
+    margin: 0%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+    color: white;
+}
+
+header {
+    background-color: #3241C7;
+    width: 100%;
+    height: 85px;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    padding-left: 10px;
+    padding-right: 10px;
+    box-sizing: border-box;
+}
+
+.return{
+    width: 80px;
+    position: absolute;
+    top: 20px;
+    left: 10px;
+}

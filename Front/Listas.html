@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minhas Listas</title>
+    <link rel="stylesheet" href="Styles/All.css">
+    <link rel="stylesheet" href="Styles/Listas.css">
+</head>
+<body>
+    <header>
+        <a href="index.html"><div id="HomeCircle"><img src="img/InvSoftIcon.png" alt="Icon"></div></a>
+    </header>
+
+    <h1 id="titulo">Listas</h1>
+
+    <div id="listas-container">
+        <!-- As listas serão carregadas aqui -->
+    </div>
+
+    <div id="add">
+        <img src="img/add.png" alt="add">
+    </div>
+</body>
+
+<script>
+    window.onload = function() {
+        // Get user_id from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const ID_Conta = urlParams.get('user_id'); // Get the user ID from the URL
+
+        if (!ID_Conta) {
+            alert('User ID not found');
+            return; // Stop the execution if ID_Conta is not found
+        }
+
+        // Fetch lists once ID_Conta is available
+        fetchListas(ID_Conta);
+
+        // Add click event to the "add" button
+        document.getElementById('add').addEventListener('click', () => {
+            createLista(ID_Conta); // Pass userId to createLista
+        });
+    };
+
+    function fetchListas(ID_Conta) {
+        fetch(`/getLists?ID_Conta=${ID_Conta}`, { // Pass user_id in the URL to the backend
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data); // Log the data here
+            const container = document.getElementById('listas-container');
+            container.innerHTML = ''; // Clear previous content
+
+            // Create a div for each list
+            data.forEach(lista => {
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('lista-wrapper');
+
+                const div = document.createElement('div');
+                div.classList.add('lista-item');
+                div.innerText = lista.Nome_Lista;
+
+                // Make div clickable
+                div.onclick = () => {
+                    window.location.href = `Dados.html?lista=${encodeURIComponent(lista.Id_Lista)}`;
+                };
+
+                const editIcon = document.createElement('img');
+                editIcon.src = 'img/edit.png';
+                editIcon.alt = 'Edit';
+                editIcon.classList.add('edit-icon');
+                editIcon.onclick = (event) => {
+                    event.stopPropagation(); // Prevent list click
+                    alert(`Edit clicked for list ${lista.Id_Lista}`);
+                    // Here you can open a modal or redirect to edit
+                };
+
+                wrapper.appendChild(div);
+                wrapper.appendChild(editIcon);
+                container.appendChild(wrapper);
+            });
+        })
+        .catch(error => console.error('Error loading lists:', error));
+    }
+
+    function createLista(ID_Conta) {
+        const listName = prompt("Enter the name of the new list:");
+        if (!listName) return;
+
+        fetch('/createList', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')  // Send the token with the request
+            },
+            body: JSON.stringify({ nome: listName, ID_Conta: ID_Conta })  // Send user_id in the body to associate list with user
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message === 'List created successfully') {
+                alert('List created successfully!');
+                fetchListas(ID_Conta); // Reload lists after creation
+            } else {
+                alert('Error creating list: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error creating list:', error));
+    }
+</script>
+
+</html>

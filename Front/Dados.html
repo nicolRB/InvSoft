@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="Styles/All.css">
+    <link rel="stylesheet" href="Styles/Dados.css">
+</head>
+
+<body>
+    <a href="javascript:history.back();"><img src="img/return.png" alt="return" class="return"></a>
+    <h1></h1>
+    <div id="table-container"></div> <!-- Container to hold the table -->
+
+    <!-- Modal for editing data -->
+    <div id="edit-modal" style="display:none;">
+        <input type="text" id="edit-input" />
+        <button onclick="saveEdit()">Save</button>
+        <button onclick="closeModal()">Cancel</button>
+    </div>
+</body>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const listaId = urlParams.get('lista'); // Get the 'lista' ID from the URL
+
+    let currentCellId = null;  // Variable to hold the current cell ID to edit
+
+    if (listaId) {
+        // Add the token to the request header
+        fetch(`/getListName?lista=${encodeURIComponent(listaId)}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (response.status === 401) {
+                alert('Your session has expired. Please log in again.');
+                window.location.href = '/login.html';
+            } else {
+                return response.json();
+            }
+        })
+        .then(data => {
+            document.querySelector('h1').textContent = data.Nome_Lista;
+        })
+        .catch(error => console.error('Erro ao carregar nome da lista:', error));
+
+        // Fetch the list data
+        fetch(`/getListData?lista=${encodeURIComponent(listaId)}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.length === 0) {
+                document.body.innerHTML += "<p>Nenhum dado encontrado.</p>";
+                return;
+            }
+
+            const colunas = [...new Set(data.map(item => item.Nome_Coluna))].sort();
+            const linhas = [...new Set(data.map(item => item.Linha))].sort((a, b) => a - b);
+
+            const table = document.createElement('table');
+            table.classList.add('tabela');
+
+            // Header Row
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `<th></th>`; 
+
+            colunas.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+
+            table.appendChild(headerRow);
+
+            // Data Rows
+            linhas.forEach(ln => {
+                const row = document.createElement('tr');
+                const rowHeader = document.createElement('th');
+                rowHeader.textContent = ln;
+                row.appendChild(rowHeader);
+
+                colunas.forEach(coluna => {
+                    const cell = document.createElement('td');
+                    const found = data.find(item => item.Linha === ln && item.Nome_Coluna === coluna);
+                    if (found) {
+                        console.log('found:', found); // Adicione isso para ver o conteúdo completo
+
+                        const span = document.createElement('span');
+                        span.textContent = found.Dados;
+
+                        const img = document.createElement('img');
+                        img.src = 'img/edit.png';
+                        img.alt = 'edit';
+                        img.classList.add('edit-icon');
+                        img.setAttribute('data-id', found.Id_Info);  // <-- Aqui pode estar o problema
+                        img.onclick = openEditModal;
+
+                        cell.appendChild(span);
+                        cell.appendChild(img);
+                    }
+
+                    row.appendChild(cell);
+                });
+
+                table.appendChild(row);
+            });
+
+            document.getElementById("table-container").appendChild(table);
+        })
+        .catch(error => console.error('Erro ao carregar dados da lista:', error));
+    }
+
+    // Function to open the edit modal
+    function openEditModal(event) {
+        currentCellId = event.target.getAttribute('data-id');  // Get the ID of the cell to edit
+        const cellData = event.target.previousElementSibling.textContent; // Get the current data from the cell
+        document.getElementById('edit-input').value = cellData; // Set the input field with current data
+        document.getElementById('edit-modal').style.display = 'block';  // Show the modal
+    }
+
+    // Function to save the edited value
+    function saveEdit() {
+        const newValue = document.getElementById('edit-input').value;
+        console.log('Saving new value:', newValue);
+
+        fetch(`/updateData`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: currentCellId,
+                newData: newValue
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Data updated successfully');
+                location.reload();  // Reload the page to see the updated data
+            } else {
+                alert('Error updating data');
+            }
+        })
+        .catch(error => console.error('Error saving data:', error));
+
+        closeModal();
+    }
+
+
+    // Function to close the edit modal
+    function closeModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+    }
+</script>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="Styles/All.css">
+</head>
+<body>
+    <a href="javascript:history.back();"><img src="img/return.png" alt="return" class="return"></a>
+
+    <div class="form-container">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <input type="text" name="account" placeholder="Email/Username" required>
+            <input type="password" name="password" placeholder="Senha" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</body>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const account = formData.get('account');
+    const password = formData.get('password');
+
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account, password })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Login Success:', data);
+
+            // optionally store the token for later
+            localStorage.setItem('token', data.token);
+
+            // Redirect to Listas.html with user ID
+            window.location.href = `Listas.html?user_id=${data.id}`;
+        } else {
+            const error = await response.json();
+            alert(error.message || 'Login failed!');
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert('An error occurred!');
+    }
+});
+</script>
+
+</html>

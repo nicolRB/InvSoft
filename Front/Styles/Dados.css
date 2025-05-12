@@ -1,0 +1,36 @@
+body{
+    color: white;
+}
+
+.table {
+    border-collapse: collapse;
+    width: 100%;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: center;
+} 
+
+th {
+    background-color: #313438;
+    font-weight: bold;
+}
+
+tr:nth-child(even) td {
+    background-color: #313438;
+}
+
+tr:hover td {
+    background-color: #313438;
+}
+
+.edit-icon {
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    vertical-align: middle;
+}

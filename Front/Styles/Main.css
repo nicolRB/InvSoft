@@ -1,0 +1,28 @@
+body {
+    color: #ffffff;
+    padding-top: 30px;
+}
+
+.option{
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+#title {
+    font-size: 70px;
+    letter-spacing: 15px;
+    margin-top: 0;
+}
+
+#subtitle {
+    color: #AAAAAA;
+    font-size: 30px;
+}
+
+#Icon{
+    height: 350px;
+}
+
+a{
+    color: inherit;
+}
