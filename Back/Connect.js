@@ -270,6 +270,7 @@ app.get('/getListData', authenticateToken, (req, res) => {
             Lista.Nome_Lista,
             Linha.Num AS Linha,
             Coluna.Nome_Coluna,
+            Coluna.ID_Coluna,
             Info.Dados
         FROM Lista
         INNER JOIN Linha ON Lista.Id_Lista = Linha.Lista
@@ -620,6 +621,84 @@ app.delete('/deleteList', authenticateToken, (req, res) => {
     );
 });
 
+app.post('/newColumn', authenticateToken, (req, res) => {
+    const { newData, lista } = req.body;
+
+    if (!newData) {
+        return res.status(400).json({ success: false, message: 'Precisa de nome' });
+    }
+
+    const query = 'INSERT INTO Coluna (Nome_Coluna, Lista) VALUES (?, ?)';
+    connection.query(query, [newData, lista], (err, result) => {
+        if (err) {
+            console.error('Error updating column name:', err);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+
+        // Return the new column data using the insertId
+        res.json({
+            success: true,
+            newColumn: {
+                ID_Coluna: result.insertId,
+                Nome_Coluna: newData
+            }
+        });
+    });
+});
+
+app.post('/newRow', authenticateToken, (req, res) => {
+    const listaId = req.body.lista;
+
+    if (!listaId) {
+        return res.status(400).json({ success: false, message: 'Missing lista ID' });
+    }
+
+    // Find the highest Num for the given Lista
+    connection.query(
+        'SELECT MAX(Num) AS maxNum FROM Linha WHERE Lista = ?',
+        [listaId],
+        (err, results) => {
+            if (err) {
+                console.error('Error fetching max Num:', err);
+                return res.status(500).json({ success: false, message: 'Database error' });
+            }
+
+            const nextNum = (results[0].maxNum || 0) + 1;
+
+            // Insert the new row with the computed Num
+            connection.query(
+                'INSERT INTO Linha (Lista, Num) VALUES (?, ?)',
+                [listaId, nextNum],
+                (err, result) => {
+                    if (err) {
+                        console.error('Error inserting new row:', err);
+                        return res.status(500).json({ success: false, message: 'Insert failed' });
+                    }
+
+                    res.json({ success: true, insertedId: result.insertId, num: nextNum });
+                }
+            );
+        }
+    );
+});
+
+app.post('/newColumnName', authenticateToken, (req, res) => {
+    const { id, newData } = req.body;
+
+    if (!id || !newData) {
+        return res.status(400).json({ success: false, message: 'Missing column ID or new name' });
+    }
+
+    const query = 'UPDATE Coluna SET Nome_Coluna = ? WHERE Id_Coluna = ?';
+    connection.query(query, [newData, id], (err, result) => {
+        if (err) {
+            console.error('Error updating column name:', err);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+
+        res.json({ success: true });
+    });
+});
 
 process.on('SIGINT', () => {
     console.log('\nEncerrando...');

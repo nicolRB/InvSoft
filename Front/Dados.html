@@ -49,7 +49,15 @@
                 return;
             }
 
-            const colunas = [...new Set(data.map(item => item.Nome_Coluna))].sort();
+            const colunas = [];
+            const seen = new Set();
+            data.forEach(item => {
+                if (!seen.has(item.Nome_Coluna)) {
+                    seen.add(item.Nome_Coluna);
+                    colunas.push({ nome: item.Nome_Coluna, id: item.ID_Coluna });
+                }
+            });
+
             const linhas = [...new Set(data.map(item => item.Linha))].sort((a, b) => a - b);
 
             // Create table element
@@ -61,7 +69,39 @@
             headerRow.innerHTML = `<th></th>`;
             colunas.forEach(col => {
                 const th = document.createElement('th');
-                th.textContent = col;
+                th.textContent = col.nome;
+
+                const editImg = document.createElement('img');
+                editImg.src = 'img/edit.png';
+                editImg.alt = 'edit';
+                editImg.classList.add('edit-icon');
+                editImg.onclick = () => {
+                    const newValue = prompt("Editar nome da coluna:", col.nome);
+                    if (newValue !== null) {
+                        fetch(`/newColumnName`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                id: col.id,
+                                newData: newValue
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(result => {
+                            if (result.success) {
+                                th.firstChild.textContent = newValue;
+                            } else {
+                                alert('Erro ao atualizar nome da coluna.');
+                            }
+                        })
+                        .catch(error => console.error('Erro ao salvar:', error));
+                    }
+                };
+
+                th.appendChild(editImg);
                 headerRow.appendChild(th);
             });
             
@@ -71,6 +111,31 @@
             addColImg.src = 'img/add.png';
             addColImg.alt = 'add column';
             addColImg.classList.add('add-icon');
+            addColImg.onclick = () => {
+                const newValue = prompt("Nova coluna:");
+                if (!newValue) return;
+
+                fetch(`/newColumn`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        newData: newValue,
+                        lista: listaId
+                    })
+                })
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload(); // Just reload the page
+                    } else {
+                        alert('Erro ao adicionar a coluna.');
+                    }
+                })
+                .catch(error => console.error('Erro ao salvar:', error));
+            };
             thAddColumn.appendChild(addColImg);
             headerRow.appendChild(thAddColumn);
 
@@ -85,7 +150,7 @@
 
                 colunas.forEach(coluna => {
                     const cell = document.createElement('td');
-                    const found = data.find(item => item.Linha === ln && item.Nome_Coluna === coluna);
+                    const found = data.find(item => item.Linha === ln && item.Nome_Coluna === coluna.nome);
                     if (found) {
                         const span = document.createElement('span');
                         span.textContent = found.Dados;
@@ -95,7 +160,7 @@
                         editImg.alt = 'edit';
                         editImg.classList.add('edit-icon');
                         editImg.onclick = () => {
-                            const newValue = prompt("Edit value:", span.textContent);
+                            const newValue = prompt("Editar célula:", span.textContent);
                             if (newValue !== null) {
                                 fetch(`/updateData`, {
                                     method: 'POST',
@@ -140,6 +205,27 @@
             addRowImg.src = 'img/add.png';
             addRowImg.alt = 'add row';
             addRowImg.classList.add('add-icon');
+            addRowImg.onclick = () => {
+                fetch('/newRow', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        lista: listaId
+                    })
+                })
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Erro ao adicionar a linha.');
+                    }
+                })
+                .catch(error => console.error('Erro ao salvar:', error));
+            }
 
             thAddRow.appendChild(addRowImg);
             addRowFooter.appendChild(thAddRow);
