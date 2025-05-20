@@ -9,126 +9,126 @@ const open = (...args) => import('open').then(mod => mod.default(...args));
 
 // Create a connection to MySQL (without specifying the database for now)
 const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: ''
+host: 'localhost',
+user: 'root',
+password: ''
 });
 
 // Set up the terminal interface for user input
 const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
+input: process.stdin,
+output: process.stdout
 });
 
 connection.connect((err) => {
-  if (err) {
+if (err) {
     console.error('Error connecting to MySQL: ' + err.stack);
     return;
-  }
+}
 
-  console.log('Connected as ID ' + connection.threadId);
+console.log('Connected as ID ' + connection.threadId);
 
-  // Check if the database exists
-  connection.query('SHOW DATABASES LIKE "Listas"', (err, result) => {
+// Check if the database exists
+connection.query('SHOW DATABASES LIKE "Listas"', (err, result) => {
     if (err) {
-      console.error('Error checking database: ' + err.stack);
-      return;
+    console.error('Error checking database: ' + err.stack);
+    return;
     }
 
     if (result.length === 0) {
-      console.log('Database does not exist. Creating database...');
-      
-      // Create the database
-      connection.query('CREATE DATABASE Listas', (err) => {
+    console.log('Database does not exist. Creating database...');
+    
+    // Create the database
+    connection.query('CREATE DATABASE Listas', (err) => {
         if (err) {
-          console.error('Error creating database: ' + err.stack);
-          return;
+        console.error('Error creating database: ' + err.stack);
+        return;
         }
         console.log('Database "Listas" created.');
         // After creating the database, close the initial connection and reconnect with the new database
         connection.changeUser({ database: 'Listas' }, (err) => {
-          if (err) {
+        if (err) {
             console.error('Error selecting database: ' + err.stack);
             return;
-          }
-          console.log('Connected to the "Listas" database');
-          ensureTablesExist(); // Check and create tables if necessary
-        });
-      });
-    } else {
-      // If the database exists, just select it
-      connection.changeUser({ database: 'Listas' }, (err) => {
-        if (err) {
-          console.error('Error selecting database: ' + err.stack);
-          return;
         }
         console.log('Connected to the "Listas" database');
         ensureTablesExist(); // Check and create tables if necessary
-      });
+        });
+    });
+    } else {
+    // If the database exists, just select it
+    connection.changeUser({ database: 'Listas' }, (err) => {
+        if (err) {
+        console.error('Error selecting database: ' + err.stack);
+        return;
+        }
+        console.log('Connected to the "Listas" database');
+        ensureTablesExist(); // Check and create tables if necessary
+    });
     }
-  });
+});
 });
 
 function ensureTablesExist() {
-  const tables = [
+const tables = [
     {
-      name: 'Conta',
-      createQuery: `CREATE TABLE IF NOT EXISTS Conta (
+    name: 'Conta',
+    createQuery: `CREATE TABLE IF NOT EXISTS Conta (
         ID_Conta INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(255) NOT NULL UNIQUE,
         email VARCHAR(255) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL
-      )`
+    )`
     },
     {
-      name: 'Lista',
-      createQuery: `CREATE TABLE IF NOT EXISTS Lista (
+    name: 'Lista',
+    createQuery: `CREATE TABLE IF NOT EXISTS Lista (
         Id_Lista INT AUTO_INCREMENT PRIMARY KEY,
         Nome_Lista VARCHAR(255) NOT NULL,
         Conta INT,
         FOREIGN KEY (Conta) REFERENCES Conta(ID_Conta)
-      )`
+    )`
     },
     {
-      name: 'Linha',
-      createQuery: `CREATE TABLE IF NOT EXISTS Linha (
+    name: 'Linha',
+    createQuery: `CREATE TABLE IF NOT EXISTS Linha (
         Id_Linha INT AUTO_INCREMENT PRIMARY KEY,
         Lista INT,
         Num INT NOT NULL,
         FOREIGN KEY (Lista) REFERENCES Lista(Id_Lista)
-      )`
+    )`
     },
     {
-      name: 'Coluna',
-      createQuery: `CREATE TABLE IF NOT EXISTS Coluna (
+    name: 'Coluna',
+    createQuery: `CREATE TABLE IF NOT EXISTS Coluna (
         Id_Coluna INT AUTO_INCREMENT PRIMARY KEY,
         Lista INT,
         Nome_Coluna VARCHAR(255) NOT NULL,
         FOREIGN KEY (Lista) REFERENCES Lista(Id_Lista)
-      )`
+    )`
     },
     {
-      name: 'Info',
-      createQuery: `CREATE TABLE IF NOT EXISTS Info (
+    name: 'Info',
+    createQuery: `CREATE TABLE IF NOT EXISTS Info (
         Id_Info INT AUTO_INCREMENT PRIMARY KEY,
         Lin INT,
         Col INT,
         Dados TEXT,
         FOREIGN KEY (Lin) REFERENCES Linha(Id_Linha),
         FOREIGN KEY (Col) REFERENCES Coluna(Id_Coluna)
-      )`
+    )`
     }
-  ];
+];
 
-  tables.forEach(table => {
+tables.forEach(table => {
     connection.query(table.createQuery, (err) => {
-      if (err) {
+    if (err) {
         console.error(`Error creating table ${table.name}: ${err.stack}`);
         return;
-      }
-      console.log(`Table ${table.name} is ready.`);
+    }
+    console.log(`Table ${table.name} is ready.`);
     });
-  });
+});
 }
 
 open(`http://localhost:${port}`);
@@ -292,7 +292,7 @@ app.get('/getListData', authenticateToken, (req, res) => {
 app.use(express.static('Front'));
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+console.log(`Server is running on port ${port}`);
 });
 
 function CriarLista() {
@@ -697,6 +697,109 @@ app.post('/newColumnName', authenticateToken, (req, res) => {
         }
 
         res.json({ success: true });
+    });
+});
+
+app.delete('/deleteColumn', authenticateToken, (req, res) => {
+    const { id } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ success: false, message: 'ID da coluna é obrigatório' });
+    }
+
+    // Deletar os dados associados à coluna na tabela Info
+    connection.query('DELETE FROM Info WHERE Col = ?', [id], (err) => {
+        if (err) {
+            console.error('Erro ao deletar dados associados à coluna:', err);
+            return res.status(500).json({ success: false, message: 'Erro ao deletar dados associados à coluna' });
+        }
+
+        // Deletar a coluna da tabela Coluna
+        connection.query('DELETE FROM Coluna WHERE Id_Coluna = ?', [id], (err) => {
+            if (err) {
+                console.error('Erro ao deletar a coluna:', err);
+                return res.status(500).json({ success: false, message: 'Erro ao deletar a coluna' });
+            }
+
+            res.json({ success: true, message: 'Coluna deletada com sucesso' });
+        });
+    });
+});
+
+app.delete('/deleteRow', authenticateToken, (req, res) => {
+    const { linha } = req.body;
+
+    if (!linha) {
+        return res.status(400).json({ success: false, message: 'ID da linha é obrigatório' });
+    }
+
+    // Buscar a linha para obter o Lista e o Num
+    const queryGetLinha = 'SELECT Lista, Num FROM Linha WHERE Id_Linha = ?';
+    connection.query(queryGetLinha, [linha], (err, result) => {
+        if (err) {
+            console.error('Erro ao buscar linha:', err);
+            return res.status(500).json({ success: false, message: 'Erro ao buscar a linha' });
+        }
+
+        if (result.length === 0) {
+            return res.status(404).json({ success: false, message: 'Linha não encontrada' });
+        }
+
+        const listaId = result[0].Lista;
+        const deletedNum = result[0].Num;
+
+        // Deletar os dados associados à linha na tabela Info
+        connection.query('DELETE FROM Info WHERE Lin = ?', [linha], (err) => {
+            if (err) {
+                console.error('Erro ao deletar dados associados à linha:', err);
+                return res.status(500).json({ success: false, message: 'Erro ao deletar dados associados à linha' });
+            }
+
+            // Deletar a linha da tabela Linha
+            connection.query('DELETE FROM Linha WHERE Id_Linha = ?', [linha], (err) => {
+                if (err) {
+                    console.error('Erro ao deletar a linha:', err);
+                    return res.status(500).json({ success: false, message: 'Erro ao deletar a linha' });
+                }
+
+                // Reordenar as linhas restantes para manter a sequência
+                const queryUpdateNums = `
+                    UPDATE Linha 
+                    SET Num = Num - 1 
+                    WHERE Lista = ? AND Num > ?;
+                `;
+                connection.query(queryUpdateNums, [listaId, deletedNum], (err) => {
+                    if (err) {
+                        console.error('Erro ao reordenar as linhas:', err);
+                        return res.status(500).json({ success: false, message: 'Erro ao reordenar as linhas' });
+                    }
+
+                    res.json({ success: true, message: 'Linha deletada e linhas reordenadas com sucesso' });
+                });
+            });
+        });
+    });
+});
+
+app.get('/getLineId', authenticateToken, (req, res) => {
+    const { lista, num } = req.query;
+
+    if (!lista || !num) {
+        return res.status(400).json({ success: false, message: 'ID da lista e número da linha são obrigatórios' });
+    }
+
+    const query = 'SELECT Id_Linha FROM Linha WHERE Lista = ? AND Num = ?';
+    connection.query(query, [lista, num], (err, results) => {
+        if (err) {
+            console.error('Erro ao buscar o ID da linha:', err);
+            return res.status(500).json({ success: false, message: 'Erro ao buscar a linha' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ success: false, message: 'Linha não encontrada' });
+        }
+
+        res.json({ success: true, linhaId: results[0].Id_Linha });
     });
 });
 

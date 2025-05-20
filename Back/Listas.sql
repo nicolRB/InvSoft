@@ -128,7 +128,7 @@ UNLOCK TABLES;
 -- Table structure for table `linha`
 --
 
-DDROP TABLE IF EXISTS `linha`;
+DROP TABLE IF EXISTS `linha`;
 CREATE TABLE `linha` (
   `Id_Linha` int(11) NOT NULL AUTO_INCREMENT,
   `Num` int(11) NOT NULL,

@@ -101,7 +101,32 @@
                     }
                 };
 
+                const deleteImg = document.createElement('img');
+                deleteImg.src = 'img/delete.png';
+                deleteImg.alt = 'delete';
+                deleteImg.classList.add('delete-icon');
+                deleteImg.onclick = () => {
+                    fetch(`/deleteColumn`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ id: col.id })
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        if (result.success) {
+                            location.reload();
+                        } else {
+                            alert('Erro ao deletar a coluna.');
+                        }
+                    })
+                    .catch(error => console.error('Erro ao deletar a coluna:', error));
+                };
+
                 th.appendChild(editImg);
+                th.appendChild(deleteImg);
                 headerRow.appendChild(th);
             });
             
@@ -146,6 +171,58 @@
                 const row = document.createElement('tr');
                 const rowHeader = document.createElement('th');
                 rowHeader.textContent = ln;
+
+                // Encontrar o ID da linha correspondente
+                const linhaEncontrada = data.find(item => item.Linha === ln);
+                const linhaId = linhaEncontrada ? linhaEncontrada.Lin : null;
+
+                // Criação do ícone de delete
+                const deleteImg = document.createElement('img');
+                deleteImg.src = 'img/delete.png';
+                deleteImg.alt = 'delete';
+                deleteImg.classList.add('delete-icon');
+                deleteImg.onclick = (e) => {
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+
+                    // Requisição para obter o ID da linha com base na lista e no número da linha
+                    fetch(`/getLineId?lista=${listaId}&num=${ln}`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        if (result.success && result.linhaId) {
+                            const linhaId = result.linhaId;
+
+                            // Enviar a requisição para deletar a linha
+                            fetch(`/deleteRow`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ linha: linhaId })
+                            })
+                            .then(res => res.json())
+                            .then(result => {
+                                if (result.success) {
+                                    console.log('Linha deletada com sucesso:', linhaId);
+                                    location.reload();
+                                } else {
+                                    console.error('Erro ao deletar a linha:', result.message);
+                                }
+                            })
+                            .catch(error => console.error('Erro ao deletar a linha:', error));
+                        } else {
+                            console.error('Linha não encontrada para exclusão.');
+                        }
+                    })
+                    .catch(error => console.error('Erro ao buscar o ID da linha:', error));
+                };
+                
+                rowHeader.appendChild(deleteImg);
                 row.appendChild(rowHeader);
 
                 colunas.forEach(coluna => {
@@ -236,7 +313,7 @@
                 emptyTh.classList.add('no-border');
                 addRowFooter.appendChild(emptyTh);
             }
-
+            
             table.appendChild(addRowFooter);
 
 
