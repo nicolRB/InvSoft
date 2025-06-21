@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>InvSoft - Dados</title>
     <link rel="stylesheet" href="Styles/All.css">
     <link rel="stylesheet" href="Styles/Dados.css">
 </head>
 
 <body>
     <a href="javascript:history.back();"><img src="img/return.png" alt="return" class="return"></a>
+    <div id="SeletorDePasta"></div>
     <h1></h1>
-    <div id="table-container"></div> <!-- Container to hold the table -->
+    <div id="table-container"></div>
 </body>
 
 <script>
@@ -20,267 +21,166 @@
 
     if (listaId) {
         fetch(`/getListName?lista=${encodeURIComponent(listaId)}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         })
-        .then(response => {
-            if (response.status === 401) {
-                alert('Your session has expired. Please log in again.');
-                window.location.href = '/login.html';
-            } else {
-                return response.json();
-            }
-        })
+        .then(res => res.json())
         .then(data => {
             document.querySelector('h1').textContent = data.Nome_Lista;
-        })
-        .catch(error => console.error('Erro ao carregar nome da lista:', error));
+        });
+
+        carregarSeletorDePasta(listaId);
 
         fetch(`/getListData?lista=${encodeURIComponent(listaId)}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.length === 0) {
-                document.body.innerHTML += "<p>Nenhum dado encontrado.</p>";
-                return;
-            }
+        .then(res => res.json())
+        .then(result => {
+            const colunas = result.colunas;
+            const linhas = result.linhas;
+            const infos = result.infos;
 
-            const colunas = [];
-            const seen = new Set();
-            data.forEach(item => {
-                if (!seen.has(item.Nome_Coluna)) {
-                    seen.add(item.Nome_Coluna);
-                    colunas.push({ nome: item.Nome_Coluna, id: item.ID_Coluna });
-                }
-            });
-
-            const linhas = [...new Set(data.map(item => item.Linha))].sort((a, b) => a - b);
-
-            // Create table element
             const table = document.createElement('table');
             table.classList.add('tabela');
 
-            // Header row
             const headerRow = document.createElement('tr');
-            headerRow.innerHTML = `<th></th>`;
+            const thEmpty = document.createElement('th');
+            headerRow.appendChild(thEmpty);
+
             colunas.forEach(col => {
                 const th = document.createElement('th');
-                th.textContent = col.nome;
+                th.textContent = col.Nome_Coluna;
 
                 const editImg = document.createElement('img');
                 editImg.src = 'img/edit.png';
-                editImg.alt = 'edit';
                 editImg.classList.add('edit-icon');
                 editImg.onclick = () => {
-                    const newValue = prompt("Editar nome da coluna:", col.nome);
-                    if (newValue !== null) {
-                        fetch(`/newColumnName`, {
+                    const newValue = prompt("Editar nome da coluna:", col.Nome_Coluna);
+                    if (newValue) {
+                        fetch('/newColumnName', {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({
-                                id: col.id,
-                                newData: newValue
-                            })
-                        })
-                        .then(res => res.json())
-                        .then(result => {
-                            if (result.success) {
-                                th.firstChild.textContent = newValue;
-                            } else {
-                                alert('Erro ao atualizar nome da coluna.');
-                            }
-                        })
-                        .catch(error => console.error('Erro ao salvar:', error));
+                            body: JSON.stringify({ id: col.Id_Coluna, newData: newValue })
+                        }).then(r => r.json())
+                        .then(resp => resp.success && location.reload());
                     }
                 };
 
                 const deleteImg = document.createElement('img');
                 deleteImg.src = 'img/delete.png';
-                deleteImg.alt = 'delete';
                 deleteImg.classList.add('delete-icon');
                 deleteImg.onclick = () => {
-                    fetch(`/deleteColumn`, {
+                    fetch('/deleteColumn', {
                         method: 'DELETE',
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('token')}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ id: col.id })
-                    })
-                    .then(res => res.json())
-                    .then(result => {
-                        if (result.success) {
-                            location.reload();
-                        } else {
-                            alert('Erro ao deletar a coluna.');
-                        }
-                    })
-                    .catch(error => console.error('Erro ao deletar a coluna:', error));
+                        body: JSON.stringify({ id: col.Id_Coluna })
+                    }).then(r => r.json())
+                    .then(resp => resp.success && location.reload());
                 };
 
                 th.appendChild(editImg);
                 th.appendChild(deleteImg);
                 headerRow.appendChild(th);
             });
-            
-            const thAddColumn = document.createElement('th');
-            thAddColumn.classList.add('no-border');
+
+            const addColTh = document.createElement('th');
+            addColTh.classList.add('no-border');
             const addColImg = document.createElement('img');
             addColImg.src = 'img/add.png';
-            addColImg.alt = 'add column';
             addColImg.classList.add('add-icon');
             addColImg.onclick = () => {
-                const newValue = prompt("Nova coluna:");
-                if (!newValue) return;
-
-                fetch(`/newColumn`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        newData: newValue,
-                        lista: listaId
-                    })
-                })
-                .then(res => res.json())
-                .then(result => {
-                    if (result.success) {
-                        location.reload(); // Just reload the page
-                    } else {
-                        alert('Erro ao adicionar a coluna.');
-                    }
-                })
-                .catch(error => console.error('Erro ao salvar:', error));
+                const newValue = prompt('Nova coluna:');
+                if (newValue) {
+                    fetch('/newColumn', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ newData: newValue, lista: listaId })
+                    }).then(r => r.json())
+                    .then(resp => resp.success && location.reload());
+                }
             };
-            thAddColumn.appendChild(addColImg);
-            headerRow.appendChild(thAddColumn);
-
+            addColTh.appendChild(addColImg);
+            headerRow.appendChild(addColTh);
             table.appendChild(headerRow);
 
-            // Data rows
+            // 🔶 Linhas
             linhas.forEach(ln => {
                 const row = document.createElement('tr');
-                const rowHeader = document.createElement('th');
-                rowHeader.textContent = ln;
+                const th = document.createElement('th');
+                th.textContent = ln.Num;
 
-                // Encontrar o ID da linha correspondente
-                const linhaEncontrada = data.find(item => item.Linha === ln);
-                const linhaId = linhaEncontrada ? linhaEncontrada.Lin : null;
-
-                // Criação do ícone de delete
                 const deleteImg = document.createElement('img');
                 deleteImg.src = 'img/delete.png';
-                deleteImg.alt = 'delete';
                 deleteImg.classList.add('delete-icon');
-                deleteImg.onclick = (e) => {
-                    e.preventDefault(); 
-                    e.stopPropagation(); 
-
-                    // Requisição para obter o ID da linha com base na lista e no número da linha
-                    fetch(`/getLineId?lista=${listaId}&num=${ln}`, {
+                deleteImg.onclick = () => {
+                    fetch(`/deleteRow`, {
+                        method: 'DELETE',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        }
-                    })
-                    .then(res => res.json())
-                    .then(result => {
-                        if (result.success && result.linhaId) {
-                            const linhaId = result.linhaId;
-
-                            // Enviar a requisição para deletar a linha
-                            fetch(`/deleteRow`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ linha: linhaId })
-                            })
-                            .then(res => res.json())
-                            .then(result => {
-                                if (result.success) {
-                                    console.log('Linha deletada com sucesso:', linhaId);
-                                    location.reload();
-                                } else {
-                                    console.error('Erro ao deletar a linha:', result.message);
-                                }
-                            })
-                            .catch(error => console.error('Erro ao deletar a linha:', error));
-                        } else {
-                            console.error('Linha não encontrada para exclusão.');
-                        }
-                    })
-                    .catch(error => console.error('Erro ao buscar o ID da linha:', error));
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ linha: ln.Id_Linha })
+                    }).then(r => r.json())
+                    .then(resp => resp.success && location.reload());
                 };
-                
-                rowHeader.appendChild(deleteImg);
-                row.appendChild(rowHeader);
+                th.appendChild(deleteImg);
+                row.appendChild(th);
 
-                colunas.forEach(coluna => {
+                colunas.forEach(col => {
                     const cell = document.createElement('td');
-                    const found = data.find(item => item.Linha === ln && item.Nome_Coluna === coluna.nome);
-                    if (found) {
+                    const info = infos.find(i => i.Lin === ln.Id_Linha && i.Col === col.Id_Coluna);
+
+                    if (info) {
                         const span = document.createElement('span');
-                        span.textContent = found.Dados;
+                        span.textContent = info.Dados;
 
                         const editImg = document.createElement('img');
                         editImg.src = 'img/edit.png';
-                        editImg.alt = 'edit';
                         editImg.classList.add('edit-icon');
                         editImg.onclick = () => {
                             const newValue = prompt("Editar célula:", span.textContent);
                             if (newValue !== null) {
-                                fetch(`/updateData`, {
+                                fetch('/updateData', {
                                     method: 'POST',
                                     headers: {
                                         'Authorization': `Bearer ${localStorage.getItem('token')}`,
                                         'Content-Type': 'application/json'
                                     },
-                                    body: JSON.stringify({
-                                        id: found.Id_Info,
-                                        newData: newValue
-                                    })
-                                })
-                                .then(res => res.json())
-                                .then(result => {
-                                    if (result.success) {
+                                    body: JSON.stringify({ id: info.Id_Info, newData: newValue })
+                                }).then(r => r.json())
+                                .then(resp => {
+                                    if (resp.success) {
                                         span.textContent = newValue;
-                                    } else {
-                                        alert('Error updating data.');
                                     }
-                                })
-                                .catch(error => console.error('Error saving data:', error));
+                                });
                             }
                         };
 
                         cell.appendChild(span);
                         cell.appendChild(editImg);
                     }
+
                     row.appendChild(cell);
                 });
 
                 table.appendChild(row);
             });
 
-            // Add-row footer with a single icon (bottom-left)
+            // 🔸 Rodapé (Adicionar Linha)
             const addRowFooter = document.createElement('tr');
 
-            // Add a single <th> cell with no border, containing the add row icon
             const thAddRow = document.createElement('th');
             thAddRow.classList.add('no-border');
-
             const addRowImg = document.createElement('img');
             addRowImg.src = 'img/add.png';
-            addRowImg.alt = 'add row';
             addRowImg.classList.add('add-icon');
             addRowImg.onclick = () => {
                 fetch('/newRow', {
@@ -289,37 +189,105 @@
                         'Authorization': `Bearer ${localStorage.getItem('token')}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        lista: listaId
-                    })
-                })
-                .then(res => res.json())
-                .then(result => {
-                    if (result.success) {
-                        location.reload();
-                    } else {
-                        alert('Erro ao adicionar a linha.');
-                    }
-                })
-                .catch(error => console.error('Erro ao salvar:', error));
-            }
-
+                    body: JSON.stringify({ lista: listaId })
+                }).then(r => r.json())
+                .then(resp => resp.success && location.reload());
+            };
             thAddRow.appendChild(addRowImg);
             addRowFooter.appendChild(thAddRow);
 
-            // Add empty <th> to align with column count
             for (let i = 0; i < colunas.length; i++) {
                 const emptyTh = document.createElement('th');
                 emptyTh.classList.add('no-border');
                 addRowFooter.appendChild(emptyTh);
             }
-            
+
             table.appendChild(addRowFooter);
 
-
-            document.getElementById("table-container").appendChild(table);
+            document.getElementById('table-container').appendChild(table);
         })
-        .catch(error => console.error('Erro ao carregar dados da lista:', error));
+        .catch(err => console.error('Erro ao carregar dados:', err));
+    }
+
+    function carregarSeletorDePasta(listaId) {
+        fetch(`/getListFolder?lista=${listaId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+        .then(res => res.json())
+        .then(pastaAtual => {
+            fetch(`/getListUser?lista=${listaId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const ID_Conta = data.Conta;
+
+                fetch(`/getFolders?ID_Conta=${ID_Conta}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                })
+                .then(res => res.json())
+                .then(pastas => {
+                    const seletorDiv = document.getElementById('SeletorDePasta');
+
+                    const label = document.createElement('label');
+                    label.textContent = "Pasta: ";
+
+                    const select = document.createElement('select');
+
+                    const opcaoVazia = document.createElement('option');
+                    opcaoVazia.value = '';
+                    opcaoVazia.textContent = 'Nenhuma Pasta';
+                    if (!pastaAtual || !pastaAtual.Id_Pasta) {
+                        opcaoVazia.selected = true;
+                    }
+                    select.appendChild(opcaoVazia);
+
+                    pastas.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = p.nome;
+                        if (pastaAtual && pastaAtual.Id_Pasta === p.id) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+
+                    select.addEventListener('change', () => {
+                        const novaPasta = select.value || null;
+                        const confirmar = confirm("Deseja mover esta lista para a pasta selecionada?");
+                        if (!confirmar) {
+                            select.value = pastaAtual && pastaAtual.Id_Pasta ? pastaAtual.Id_Pasta : '';
+                            return;
+                        }
+
+                        fetch('/updateListFolder', {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                lista: listaId,
+                                pasta: novaPasta
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(resp => {
+                            if (resp.success) {
+                                alert('Pasta atualizada com sucesso!');
+                                location.reload();
+                            } else {
+                                alert('Erro ao atualizar pasta: ' + resp.message);
+                            }
+                        });
+                    });
+
+                    seletorDiv.appendChild(label);
+                    seletorDiv.appendChild(select);
+                });
+            });
+        });
     }
 </script>
+
 </html>

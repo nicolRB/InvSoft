@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>InvSoft - Login</title>
     <link rel="stylesheet" href="Styles/All.css">
 </head>
 <body>
@@ -42,7 +42,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             localStorage.setItem('token', data.token);
 
             // Redirect to Listas.html with user ID
-            window.location.href = `Listas.html?user_id=${data.id}`;
+            window.location.href = `Pastas.html?user_id=${data.id}`;
         } else {
             const error = await response.json();
             alert(error.message || 'Login failed!');

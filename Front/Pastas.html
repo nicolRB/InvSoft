@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InvSoft - Pastas</title>
+    <link rel="stylesheet" href="Styles/All.css">
+    <link rel="stylesheet" href="Styles/Pastas.css">
+</head>
+<body>
+    <header>
+        <a href="index.html"><div id="HomeCircle"><img src="img/InvSoftIcon.png" alt="Icon"></div></a>
+    </header>
+
+    <h1 id="titulo">Pastas</h1>
+
+    <div id="pastas-container">
+        <div class="pasta-wrapper">
+            <div id="todas" class="pasta-item">Todos</div>
+        </div>
+    </div>
+
+    <div id="add">
+        <img src="img/add.png" alt="add">
+    </div>
+</body>
+
+<script>
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const ID_Conta = urlParams.get('user_id');
+
+        if (!ID_Conta) {
+            alert('User ID not found');
+            return; 
+        }
+
+        fetchPastas(ID_Conta);
+
+        document.getElementById('add').addEventListener('click', () => {
+            createPasta(ID_Conta);
+        });
+    };
+
+    function fetchPastas(ID_Conta) {
+        fetch(`/getFolders?ID_Conta=${ID_Conta}`, {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('pastas-container');
+            container.innerHTML = `
+                <div class="pasta-wrapper">
+                    <div id="todas" class="pasta-item">Todos</div>
+                </div>
+            `;
+
+            data.forEach(pasta => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'pasta-wrapper';
+
+                wrapper.innerHTML = `
+                    <div class="pasta-item" onclick="window.location.href = 'VerPasta.html?pasta=${encodeURIComponent(pasta.id)}'">
+                        ${pasta.nome}
+                    </div>
+                    <img src="img/edit.png" alt="Edit" class="edit-icon">
+                    <img src="img/delete.png" alt="Delete" class="delete-icon">
+                `;
+
+                const editButton = wrapper.querySelector('.edit-icon');
+                const deleteButton = wrapper.querySelector('.delete-icon');
+
+                editButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    editarPasta(pasta.id, pasta.nome, ID_Conta);
+                });
+
+                deleteButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deletarPasta(pasta.id, ID_Conta);
+                });
+
+                container.appendChild(wrapper);
+            });
+
+            document.getElementById('todas').addEventListener('click', () => {
+                window.location.href = `Listas.html?user_id=${ID_Conta}`;
+            });
+        })
+        .catch(error => console.error('Erro ao buscar pastas:', error));
+    }
+
+    function createPasta(ID_Conta) {
+        const folderName = prompt("Digite o nome da nova pasta:");
+        if (!folderName) return;
+
+        fetch('/createFolder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')  // Send the token with the request
+            },
+            body: JSON.stringify({ nome: folderName, ID_Conta: ID_Conta })  // Send user_id in the body to associate list with user
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message === 'Pasta criada com sucesso') {
+                alert('Pasta criada com sucesso!');
+                fetchPastas(ID_Conta); // Reload lists after creation
+            } else {
+                alert('Erro criando pasta: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Erro criando pasta:', error));
+    }
+
+    function editarPasta(ID_Pasta, nomeAtual, ID_Conta) {
+    const novoNome = prompt("Digite o novo nome da pasta:", nomeAtual);
+    if (!novoNome) return;
+
+    fetch('/updateFolderName', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify({ id: ID_Pasta, nome: novoNome })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Pasta atualizada!');
+            fetchPastas(ID_Conta);  // Atualiza a lista após editar
+        })
+        .catch(error => console.error('Erro ao editar pasta:', error));
+    }
+
+    function deletarPasta(ID_Pasta, ID_Conta) {
+        const confirmar = confirm("Deseja realmente deletar esta pasta?");
+        if (!confirmar) return;
+
+        fetch('/deleteFolder', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify({ id: ID_Pasta })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Pasta deletada!');
+            fetchPastas(ID_Conta);  // Atualiza a lista após deletar
+        })
+        .catch(error => console.error('Erro ao deletar pasta:', error));
+    }
+
+</script>
+</html>

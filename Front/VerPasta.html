@@ -3,46 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InvSoft - Minhas Listas</title>
+    <title>Document</title>
     <link rel="stylesheet" href="Styles/All.css">
-    <link rel="stylesheet" href="Styles/Listas.css">
+    <link rel="stylesheet" href="Styles/VerPasta.css">
 </head>
 <body>
     <a href="javascript:history.back();"><img src="img/return.png" alt="return" class="return"></a>
 
-    <h1 id="titulo">Listas</h1>
+    <h1 id="titulo"></h1>
 
     <div id="listas-container">
-        <!-- As listas serão carregadas aqui -->
-    </div>
 
+    </div>
     <div id="add">
         <img src="img/add.png" alt="add">
     </div>
 </body>
-
+    
+</body>
 <script>
     window.onload = function() {
-        // Get user_id from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const ID_Conta = urlParams.get('user_id'); // Get the user ID from the URL
+        const ID_Pasta = urlParams.get('pasta');
 
-        if (!ID_Conta) {
-            alert('User ID not found');
-            return; // Stop the execution if ID_Conta is not found
+        if (!ID_Pasta) {
+            alert('ID de pasta não encontrado');
+            return; 
+        } else{
+            fetch(`/getFolderName?pasta=${ID_Pasta}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.querySelector('h1').textContent = "Pasta: "+data.Nome_Pasta;
+                document.querySelector('title').textContent = "InvSoft - "+data.Nome_Pasta;
+            });
         }
 
-        // Fetch lists once ID_Conta is available
-        fetchListas(ID_Conta);
+        fetchPasta(ID_Pasta);
 
-        // Add click event to the "add" button
         document.getElementById('add').addEventListener('click', () => {
-            createLista(ID_Conta); // Pass userId to createLista
+            createLista(ID_Pasta);
         });
     };
 
-    function fetchListas(ID_Conta) {
-        fetch(`/getLists?ID_Conta=${ID_Conta}`, { // Pass user_id in the URL to the backend
+    function fetchPasta(ID_Pasta){
+        fetch(`/getListsInFolder?ID_Pasta=${ID_Pasta}`, {
             headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
         })
         .then(response => response.json())
@@ -86,7 +92,7 @@
                     .then(data => {
                         if (data.success) {
                             alert("Lista atualizada com sucesso!");
-                            fetchListas(ID_Conta); // Recarrega as listas
+                            fetchPasta(ID_Pasta); // Recarrega as listas
                         } else {
                             alert("Erro ao atualizar: " + data.message);
                         }
@@ -115,7 +121,7 @@
                     .then(data => {
                         if (data.success) {
                             alert("Lista excluída com sucesso!");
-                            fetchListas(ID_Conta); // Recarrega as listas
+                            fetchPasta(ID_Pasta); // Recarrega as listas
                         } else {
                             alert("Erro ao excluir: " + data.message);
                         }
@@ -132,23 +138,23 @@
         .catch(error => console.error('Error loading lists:', error));
     }
 
-    function createLista(ID_Conta) {
+    function createLista(ID_Pasta) {
         const listName = prompt("Digite o nome da nova lista:");
         if (!listName) return;
 
-        fetch('/createList', {
+        fetch('/createListInFolder', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('token')  // Send the token with the request
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
             },
-            body: JSON.stringify({ nome: listName, ID_Conta: ID_Conta })  // Send user_id in the body to associate list with user
+            body: JSON.stringify({ nome: listName, id_pasta: ID_Pasta })
         })
         .then(response => response.json())
         .then(data => {
             if (data.message === 'Lista criada com sucesso') {
                 alert('Lista criada com sucesso!');
-                fetchListas(ID_Conta); // Reload lists after creation
+                fetchPasta(ID_Pasta);
             } else {
                 alert('Erro criando lista: ' + data.message);
             }
@@ -156,5 +162,4 @@
         .catch(error => console.error('Error criando lista:', error));
     }
 </script>
-
 </html>
