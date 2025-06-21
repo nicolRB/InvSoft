@@ -10,6 +10,13 @@ const openIfNeeded = () => {
     import('open').then(mod => mod.default(`http://localhost:${port}`));
   }
 };
+const path = require('path');
+
+app.use(express.static(path.join(__dirname, '..', 'Front')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'Front', 'index.html'));
+});
 
 // Create a connection to MySQL (without specifying the database for now)
 const connection = mysql.createConnection({
@@ -444,8 +451,6 @@ app.put('/updateListFolder', authenticateToken, (req, res) => {
         res.json({ success: true, message: 'Pasta da lista atualizada com sucesso' });
     });
 });
-
-app.use(express.static('Front'));
 
 if (require.main === module) {
     app.listen(port, () => {
