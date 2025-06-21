@@ -82,3 +82,50 @@ tr:hover td {
 .delete-icon:hover {
     transform: scale(1.2);
 }
+
+#SeletorDePasta {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #2e3238;
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 8px 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 999;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#SeletorDePasta label {
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+}
+
+#SeletorDePasta select {
+    background-color: #444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+#SeletorDePasta select:hover {
+    background-color: #555;
+    transform: scale(1.02);
+}
+
+#SeletorDePasta select:focus {
+    outline: none;
+    background-color: #555;
+}
