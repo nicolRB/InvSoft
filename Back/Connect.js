@@ -5,7 +5,11 @@ const app = express();
 const port = 3000;
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const open = (...args) => import('open').then(mod => mod.default(...args));
+const openIfNeeded = () => {
+  if (process.env.NODE_ENV !== 'test') {
+    import('open').then(mod => mod.default(`http://localhost:${port}`));
+  }
+};
 
 // Create a connection to MySQL (without specifying the database for now)
 const connection = mysql.createConnection({
@@ -131,8 +135,6 @@ tables.forEach(table => {
 });
 }
 
-open(`http://localhost:${port}`);
-
 app.use(express.json());                      // for JSON bodies
 app.use(express.urlencoded({ extended: true })); // for HTML form submissions
 
@@ -233,6 +235,65 @@ app.get('/getLists', authenticateToken, (req, res) => {
     });
 });
 
+app.get('/getListsInFolder', authenticateToken, (req, res) => {
+    const ID_Pasta = req.query.ID_Pasta;
+
+    if (!ID_Pasta) {
+        return res.status(400).json({ message: 'Folder ID required' });
+    }
+
+    connection.query('SELECT * FROM Lista WHERE Pasta = ?', [ID_Pasta], (err, results) => {
+        if (err) {
+            console.log(err);
+            res.status(500).send('Error retrieving data');
+        } else {
+            res.json(results);  // Send results as JSON
+        }
+    });
+});
+
+app.get('/getFolders', authenticateToken, (req, res) => {
+    const ID_Conta = req.query.ID_Conta;
+
+    if (!ID_Conta) {
+        return res.status(400).json({ message: 'User ID required' });
+    }
+
+    connection.query(
+        'SELECT ID_Pasta AS id, Nome_Pasta AS nome FROM Pasta WHERE Conta = ?',
+        [ID_Conta],
+        (err, results) => {
+            if (err) {
+                console.log(err);
+                res.status(500).send('Error retrieving data');
+            } else {
+                res.json(results);
+            }
+        }
+    );
+});
+
+app.post('/createFolder', authenticateToken, (req, res) => {
+    const { nome } = req.body;
+    const ID_Conta = req.user.id;
+
+    if (!nome) {
+        return res.status(400).json({ message: 'Requer nome de pasta' });
+    }
+
+    connection.query(
+        'INSERT INTO Pasta (Nome_Pasta, Conta) VALUES (?, ?)', 
+        [nome, ID_Conta],  // Use ID_Conta from the token directly
+        (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).json({ message: 'Database error', error: err });
+            }
+            res.status(201).json({ message: 'Pasta criada com sucesso' });
+        }
+    );
+});
+
 app.get('/getListName', authenticateToken, (req, res) => {
     const listaId = req.query.lista;  // Retrieve the list ID from the query string
 
@@ -255,6 +316,28 @@ app.get('/getListName', authenticateToken, (req, res) => {
     });
 });
 
+app.get('/getFolderName', authenticateToken, (req, res) => {
+    const pastaId = req.query.pasta;  // Retrieve the folder ID from the query string
+
+    if (!pastaId) {
+        return res.status(400).send('Faltando ID da pasta');
+    }
+
+    // Query to get the list name
+    connection.query('SELECT Nome_Pasta FROM Pasta WHERE Id_Pasta = ?', [pastaId], (err, results) => {
+        if (err) {
+            console.log(err);
+            res.status(500).send('Error retrieving folder name');
+        } else {
+            if (results.length > 0) {
+                res.json({ Nome_Pasta: results[0].Nome_Pasta });  // Send the folder name as JSON
+            } else {
+                res.status(404).send('Folder not found');
+            }
+        }
+    });
+});
+
 
 app.get('/getListData', authenticateToken, (req, res) => {
     const listaId = req.query.lista;
@@ -263,37 +346,115 @@ app.get('/getListData', authenticateToken, (req, res) => {
         return res.status(400).send('Missing lista ID');
     }
 
-    connection.query(`
+    const queryColunas = 'SELECT Id_Coluna, Nome_Coluna FROM Coluna WHERE Lista = ?';
+    const queryLinhas = 'SELECT Id_Linha, Num FROM Linha WHERE Lista = ?';
+    const queryInfos = `
         SELECT 
             Info.Id_Info,
-            Lista.Id_Lista,
-            Lista.Nome_Lista,
-            Linha.Num AS Linha,
-            Coluna.Nome_Coluna,
-            Coluna.ID_Coluna,
+            Info.Lin,
+            Info.Col,
             Info.Dados
-        FROM Lista
-        INNER JOIN Linha ON Lista.Id_Lista = Linha.Lista
-        INNER JOIN Info ON Linha.Id_Linha = Info.Lin
+        FROM Info
+        INNER JOIN Linha ON Info.Lin = Linha.Id_Linha
         INNER JOIN Coluna ON Info.Col = Coluna.Id_Coluna
-        WHERE Lista.Id_Lista = ?
-        ORDER BY Linha.Num, Coluna.Nome_Coluna
-    `, [listaId], (err, results) => {
+        WHERE Linha.Lista = ?
+    `;
+
+    connection.query(queryColunas, [listaId], (err, colunas) => {
+        if (err) return res.status(500).send('Erro ao obter colunas');
+
+        connection.query(queryLinhas, [listaId], (err, linhas) => {
+            if (err) return res.status(500).send('Erro ao obter linhas');
+
+            connection.query(queryInfos, [listaId], (err, infos) => {
+                if (err) return res.status(500).send('Erro ao obter dados');
+
+                res.json({
+                    colunas,
+                    linhas,
+                    infos
+                });
+            });
+        });
+    });
+});
+
+app.get('/getListFolder', authenticateToken, (req, res) => {
+    const listaId = req.query.lista;
+
+    if (!listaId) {
+        return res.status(400).send('Missing lista ID');
+    }
+
+    connection.query('SELECT Id_Pasta, Nome_Pasta FROM Lista LEFT JOIN Pasta ON Lista.Pasta = Pasta.Id_Pasta WHERE Id_Lista = ?', [listaId], (err, results) => {
         if (err) {
             console.log(err);
-            res.status(500).send('Error retrieving data');
+            res.status(500).send('Error retrieving folder');
         } else {
-            res.json(results);
+            if (results.length > 0) {
+                res.json({ Nome_Pasta: results[0].Nome_Pasta, Id_Pasta: results[0].Id_Pasta });  // Send the folder name as JSON
+            } else {
+                res.status(404).send('Folder not found');
+            }
         }
     });
 });
 
+app.get('/getListUser', authenticateToken, (req, res) => {
+    const listaId = req.query.lista;
+
+    if (!listaId) {
+        return res.status(400).json({ success: false, message: 'Missing lista ID' });
+    }
+
+    const sql = 'SELECT Conta FROM Lista WHERE Id_Lista = ?';
+
+    connection.query(sql, [listaId], (err, results) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+
+        if (results.length > 0) {
+            res.json({ Conta: results[0].Conta });
+        } else {
+            res.status(404).json({ success: false, message: 'List not found' });
+        }
+    });
+});
+
+app.put('/updateListFolder', authenticateToken, (req, res) => {
+    const { lista, pasta } = req.body;
+
+    if (!lista) {
+        return res.status(400).json({ success: false, message: 'Missing lista ID' });
+    }
+
+    const query = 'UPDATE Lista SET Pasta = ? WHERE Id_Lista = ?;';
+    connection.query(query, [pasta || null, lista], (err, result) => {
+        if (err) {
+            console.error('Erro ao atualizar dado:', err);
+            return res.status(500).json({ success: false, message: 'Erro ao atualizar pasta', error: err });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Nenhuma lista foi atualizada'});
+        }
+
+        res.json({ success: true, message: 'Pasta da lista atualizada com sucesso' });
+    });
+});
 
 app.use(express.static('Front'));
 
-app.listen(port, () => {
-console.log(`Server is running on port ${port}`);
-});
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+        if (process.env.NODE_ENV !== 'test') {
+            import('open').then(mod => mod.default(`http://localhost:${port}`));
+        }
+    });
+}
 
 function CriarLista() {
     rl.question('Nome da lista: ', (nome_lista) => {
@@ -327,6 +488,48 @@ app.post('/createList', authenticateToken, (req, res) => {
                 return res.status(500).json({ message: 'Database error', error: err });
             }
             res.status(201).json({ message: 'List created successfully' });
+        }
+    );
+});
+
+app.post('/createListInFolder', authenticateToken, (req, res) => {
+    const { nome, id_pasta } = req.body;
+
+    if (!nome || !id_pasta) {
+        return res.status(400).json({ message: 'List name and folder ID are required' });
+    }
+
+    // Primeiro, buscar o ID da conta a que a pasta pertence
+    connection.query(
+        'SELECT Conta FROM Pasta WHERE Id_Pasta = ?',
+        [id_pasta],
+        (err, results) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).json({ message: 'Database error on folder lookup', error: err });
+            }
+
+            if (results.length === 0) {
+                return res.status(404).json({ message: 'Folder not found' });
+            }
+
+            const idConta = results[0].Conta;
+
+            // Agora, criar a lista conectada à conta
+            connection.query(
+                'INSERT INTO Lista (Nome_Lista, Conta, Pasta) VALUES (?, ?, ?)',
+                [nome, idConta, id_pasta],
+                (err, result) => {
+                    if (err) {
+                        console.log(err);
+                        return res.status(500).json({ message: 'Database error on list creation', error: err });
+                    }
+                    res.status(201).json({ 
+                        message: 'Lista criada com sucesso', 
+                        listId: result.insertId 
+                    });
+                }
+            );
         }
     );
 });
@@ -602,6 +805,29 @@ app.put('/updateListName', authenticateToken, (req, res) => {
     );
 });
 
+app.put('/updateFolderName', authenticateToken, (req, res) => {
+    const { id, nome } = req.body;
+
+    if (!id || !nome) {
+        return res.status(400).json({ success: false, message: 'ID e novo nome são obrigatórios' });
+    }
+
+    connection.query(
+        'UPDATE Pasta SET Nome_Pasta = ? WHERE Id_Pasta = ? AND Conta = ?',
+        [nome, id, req.user.id],
+        (err, results) => {
+            if (err) {
+                console.error('Erro no UPDATE:', err);
+                return res.status(500).json({ success: false, message: 'Erro ao atualizar pasta' });
+            }
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'Pasta não encontrada ou sem permissão' });
+            }
+            res.json({ success: true, message: 'Pasta atualizada com sucesso' });
+        }
+    );
+});
+
 app.delete('/deleteList', authenticateToken, (req, res) => {
     const { id } = req.body;
 
@@ -617,6 +843,25 @@ app.delete('/deleteList', authenticateToken, (req, res) => {
                 return res.status(404).json({ success: false, message: 'Lista não encontrada ou sem permissão' });
             }
             res.json({ success: true, message: 'Lista apagada com sucesso' });
+        }
+    );
+});
+
+app.delete('/deleteFolder', authenticateToken, (req, res) => {
+    const { id } = req.body;
+
+    connection.query(
+        'DELETE FROM Pasta WHERE Id_Pasta = ?',
+        [id],
+        (err, results) => {
+            if (err) {
+                console.error('Erro no DELETE:', err);
+                return res.status(500).json({ success: false, message: 'Erro ao apagar a pasta' });
+            }
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'Pasta não encontrada ou sem permissão' });
+            }
+            res.json({ success: true, message: 'Pasta apagada com sucesso' });
         }
     );
 });
@@ -803,9 +1048,28 @@ app.get('/getLineId', authenticateToken, (req, res) => {
     });
 });
 
-process.on('SIGINT', () => {
-    console.log('\nEncerrando...');
-    connection.end();
-    rl.close();
-    process.exit();
-});
+if (process.env.NODE_ENV !== 'test') {
+  let rl;
+    if (require.main === module && process.env.NODE_ENV !== 'test') {
+    rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    process.on('SIGINT', () => {
+        console.log('\nEncerrando...');
+        connection.end();
+        rl.close();
+        process.exit();
+    });
+    }
+
+    process.on('SIGINT', () => {
+        console.log('\nEncerrando...');
+        connection.end();
+        rl.close();
+        process.exit();
+    });
+}
+
+module.exports = { app, connection };

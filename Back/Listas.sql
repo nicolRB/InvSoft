@@ -183,9 +183,13 @@ CREATE TABLE `lista` (
   `Id_Lista` int(11) NOT NULL AUTO_INCREMENT,
   `Nome_Lista` varchar(30) NOT NULL,
   `Pasta` int(11) DEFAULT NULL,
+  `Conta` int(11) NOT NULL,
   PRIMARY KEY (`Id_Lista`),
   KEY `Pasta` (`Pasta`),
-  CONSTRAINT `lista_ibfk_1` FOREIGN KEY (`Pasta`) REFERENCES `pasta` (`Id_Pasta`)
+  FOREIGN KEY (`Pasta`) REFERENCES `pasta` (`Id_Pasta`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+  FOREIGN KEY (`Conta`) REFERENCES `conta` (`Id_Conta`)
     ON DELETE CASCADE
     ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
