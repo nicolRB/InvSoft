@@ -5,16 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InvSoft - Registro</title>
     <link rel="stylesheet" href="Styles/All.css">
+    <link rel="stylesheet" href="Styles/Registro.css">
 </head>
 <body>
     <a href="javascript:history.back();"><img src="img/return.png" alt="return" class="return"></a>
 
     <div class="form-container">
-        <h2>Register</h2>
+        <h2>Registro</h2>
         <form id="registerForm">
             <input type="text" name="username" placeholder="Username" required>
             <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
+            <div class="password-wrapper">
+                <input id="passwordInput" type="password" name="password" placeholder="Senha" required>
+                <img src="img/eye-closed.png" alt="toggle password visibility" id="togglePassword" class="toggle-password">
+            </div>
             <button type="submit">Register</button>
         </form>
     </div>
@@ -54,6 +58,23 @@
         } catch (error) {
             console.error('Error:', error);
             alert('Something went wrong.');
+        }
+    });
+
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('passwordInput');
+
+    togglePassword.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+
+        // Troca o ícone conforme o estado
+        if(type === 'password') {
+            togglePassword.src = 'img/eye-closed.png';
+            togglePassword.alt = 'Mostrar senha';
+        } else {
+            togglePassword.src = 'img/eye-open.png';
+            togglePassword.alt = 'Ocultar senha';
         }
     });
 </script>

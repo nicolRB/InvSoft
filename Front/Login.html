@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InvSoft - Login</title>
-    <link rel="stylesheet" href="Styles/All.css">
     <link rel="stylesheet" href="Styles/Login.css">
 </head>
 <body>
@@ -14,46 +13,66 @@
         <h2>Login</h2>
         <form id="loginForm">
             <input type="text" name="account" placeholder="Email/Username" required>
-            <input type="password" name="password" placeholder="Senha" required>
+            <div class="password-wrapper">
+                <input id="passwordInput" type="password" name="password" placeholder="Senha" required>
+                <img src="img/eye-closed.png" alt="toggle password visibility" id="togglePassword" class="toggle-password">
+            </div>
             <button type="submit">Login</button>
         </form>
     </div>
 </body>
 
 <script>
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
 
-    const formData = new FormData(this);
-    const account = formData.get('account');
-    const password = formData.get('password');
+        const formData = new FormData(this);
+        const account = formData.get('account');
+        const password = formData.get('password');
 
-    try {
-        const response = await fetch('/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ account, password })
-        });
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ account, password })
+            });
 
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Login Success:', data);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Login Success:', data);
 
-            // optionally store the token for later
-            localStorage.setItem('token', data.token);
+                // optionally store the token for later
+                localStorage.setItem('token', data.token);
 
-            // Redirect to Listas.html with user ID
-            window.location.href = `Pastas.html?user_id=${data.id}`;
-        } else {
-            const error = await response.json();
-            alert(error.message || 'Login failed!');
+                // Redirect to Listas.html with user ID
+                window.location.href = `Pastas.html?user_id=${data.id}`;
+            } else {
+                const error = await response.json();
+                alert(error.message || 'Login failed!');
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert('An error occurred!');
         }
+    });
 
-    } catch (err) {
-        console.error(err);
-        alert('An error occurred!');
-    }
-});
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('passwordInput');
+
+    togglePassword.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+
+        // Troca o ícone conforme o estado
+        if(type === 'password') {
+            togglePassword.src = 'img/eye-closed.png';
+            togglePassword.alt = 'Mostrar senha';
+        } else {
+            togglePassword.src = 'img/eye-open.png';
+            togglePassword.alt = 'Ocultar senha';
+        }
+    });
 </script>
 
 </html>
