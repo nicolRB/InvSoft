@@ -108,3 +108,30 @@
 .delete-icon:hover {
     transform: scale(1.2); /* Hover effect */
 }
+
+#perfil {
+    margin-left: auto; /* empurra para a direita */
+    height: 65px;
+    width: 65px;
+    border-radius: 50%;
+    border-style: solid;
+    border-color: white;
+    border-width: 4px;
+    overflow: hidden;
+    background-color: rgb(33, 33, 33);
+    padding: 6px;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+#perfil img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border-radius: 50%;
+    filter: invert(1);
+}

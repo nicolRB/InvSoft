@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="Styles/All.css">
+    <link rel="stylesheet" href="Styles/Conta.css">
+</head>
+<body>
+    <a href="javascript:history.back();"><img src="img/return.png" alt="Voltar" class="return"></a>
+
+    <h1 id="title">Painel do Usuário</h1>
+    <h1 id="username-header"></h1>
+
+    <div class="profile-container">
+        <div class="profile-picture">
+            <img src="img/account.png" alt="Foto de Perfil">
+        </div>
+
+        <div class="profile-info">
+            <p>
+                <strong>Nome:</strong>
+                <span id="username">...</span>
+                <img src="img/edit.png" class="edit-icon" onclick="editarNome()">
+            </p>
+
+            <p>
+                <strong>Email:</strong>
+                <span id="email">...</span>
+                <img src="img/edit.png" class="edit-icon" onclick="editarEmail()">
+            </p>
+        </div>
+
+        <div class="profile-actions">
+            <button onclick="alterarSenha()">Alterar Senha</button>
+            <button onclick="logout()">Sair</button>
+        </div>
+    </div>
+    <div>
+        <p><strong>Total de Listas:</strong> <span id="totalListas">...</span></p>
+        <p><strong>Total de Pastas:</strong> <span id="totalPastas">...</span></p>
+
+        <button onclick="apagarTodasListas()" style="background-color: #c7522f; margin-top: 10px;">Apagar Todas as Listas</button>
+        <button onclick="apagarTodasPastas()" style="background-color: #c7522f; margin-top: 10px;">Apagar Todas as Pastas</button>
+    </div>
+    <button class="delete-user" onclick="apagarConta()">Excluir Conta</button>
+
+    <div id="senhaModal" style="display: none;">
+        <div class="modal">
+            <h2>Alterar Senha</h2>
+
+            <div class="password-wrapper">
+                <input type="password" id="senhaAtual" placeholder="Senha atual">
+                <img src="img/eye-closed.png" alt="Mostrar senha" class="toggle-password" onclick="toggleSenha('senhaAtual', this)">
+            </div>
+
+            <div class="password-wrapper">
+                <input type="password" id="senhaNova" placeholder="Nova senha">
+                <img src="img/eye-closed.png" alt="Mostrar senha" class="toggle-password" onclick="toggleSenha('senhaNova', this)">
+            </div>
+
+            <div class="modal-buttons">
+                <button onclick="enviarNovaSenha()">Confirmar</button>
+                <button onclick="fecharModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const contaID = urlParams.get('user_id');
+    
+    if(contaID)
+    {
+        fetch(`/getAccount?ID_Conta=${encodeURIComponent(contaID)}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const res = data[0]; 
+
+            document.getElementById('username').textContent = res.Username;
+            document.getElementById('email').textContent = res.email;
+            document.getElementById('username-header').textContent = "Bem vindo, "+res.Username;
+        });
+
+        fetch('/contarItens', {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('totalListas').textContent = data.totalListas;
+            document.getElementById('totalPastas').textContent = data.totalPastas;
+        });
+    }
+
+    function alterarSenha() {
+        document.getElementById('senhaModal').style.display = 'flex';
+    }
+
+    function fecharModal() {
+        document.getElementById('senhaModal').style.display = 'none';
+        document.getElementById('senhaAtual').value = '';
+        document.getElementById('senhaNova').value = '';
+    }
+
+    function enviarNovaSenha() {
+        const velhaSenha = document.getElementById('senhaAtual').value;
+        const novaSenha = document.getElementById('senhaNova').value;
+
+        if (!velhaSenha || !novaSenha) {
+            alert("Preencha todos os campos.");
+            return;
+        }
+
+        fetch('/updatePassword', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify({
+                oldPassword: velhaSenha,
+                newPassword: novaSenha
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message || "Senha alterada com sucesso!");
+            fecharModal();
+        })
+        .catch(err => {
+            console.error("Erro:", err);
+            alert("Erro ao alterar senha.");
+        });
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = 'index.html';
+    }
+
+    function editarNome() {
+        const atual = document.getElementById('username').textContent;
+        const novo = prompt("Novo nome de usuário:", atual);
+        if (!novo || novo === atual) return;
+
+        fetch('/updateUsername', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify({ novoNome: novo })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message || "Nome atualizado!");
+            location.reload();
+        })
+        .catch(err => console.error("Erro ao atualizar nome:", err));
+    }
+
+    function editarEmail() {
+        const atual = document.getElementById('email').textContent;
+        const novo = prompt("Novo email:", atual);
+        if (!novo || novo === atual) return;
+
+        fetch('/updateEmail', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify({ novoEmail: novo })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message || "Email atualizado!");
+            location.reload();
+        })
+        .catch(err => console.error("Erro ao atualizar email:", err));
+    }
+
+    function apagarConta() {
+        const confirmar = confirm("Tem certeza que deseja apagar sua conta? Esta ação é irreversível.");
+        if (!confirmar) return;
+
+        fetch('/deleteAccount', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message || "Conta excluída com sucesso!");
+            localStorage.removeItem('token');
+            window.location.href = 'index.html';
+        })
+        .catch(err => console.error("Erro ao excluir conta:", err));
+    }
+
+    function apagarTodasListas() {
+        if (!confirm("Tem certeza que deseja apagar TODAS as listas da conta?")) return;
+
+        fetch('/apagarTodasListas', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            location.reload();
+        });
+    }
+
+    function apagarTodasPastas() {
+        if (!confirm("Tem certeza que deseja apagar TODAS as pastas da conta?")) return;
+
+        fetch('/apagarTodasPastas', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            location.reload();
+        });
+    }
+
+    function toggleSenha(inputId, iconElement) {
+        const input = document.getElementById(inputId);
+        const isSenha = input.getAttribute('type') === 'password';
+
+        input.setAttribute('type', isSenha ? 'text' : 'password');
+        iconElement.src = isSenha ? 'img/eye-open.png' : 'img/eye-closed.png';
+        iconElement.alt = isSenha ? 'Ocultar senha' : 'Mostrar senha';
+    }
+
+</script>
+</html>

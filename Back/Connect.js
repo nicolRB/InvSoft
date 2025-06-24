@@ -5,6 +5,7 @@ const app = express();
 const port = 3000;
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
 const openIfNeeded = () => {
   if (process.env.NODE_ENV !== 'test') {
     import('open').then(mod => mod.default(`http://localhost:${port}`));
@@ -42,8 +43,8 @@ console.log('Connected as ID ' + connection.threadId);
 // Check if the database exists
 connection.query('SHOW DATABASES LIKE "Listas"', (err, result) => {
     if (err) {
-    console.error('Error checking database: ' + err.stack);
-    return;
+        console.error('Error checking database: ' + err.stack);
+        return;
     }
 
     if (result.length === 0) {
@@ -52,94 +53,76 @@ connection.query('SHOW DATABASES LIKE "Listas"', (err, result) => {
     // Create the database
     connection.query('CREATE DATABASE Listas', (err) => {
         if (err) {
-        console.error('Error creating database: ' + err.stack);
-        return;
-        }
-        console.log('Database "Listas" created.');
-        // After creating the database, close the initial connection and reconnect with the new database
-        connection.changeUser({ database: 'Listas' }, (err) => {
-        if (err) {
-            console.error('Error selecting database: ' + err.stack);
+            console.error('Error creating database: ' + err.stack);
             return;
         }
-        console.log('Connected to the "Listas" database');
-        ensureTablesExist(); // Check and create tables if necessary
+        console.log('Database "Listas" created.');
+        connection.changeUser({ database: 'listas' }, (err) => {
+            if (err) {
+                console.error('Error selecting database:', err);
+                return;
+            }
+
+            console.log('Connected to the "listas" database');
+
+            executarSQLDump(path.join(__dirname, 'Listas.sql'), (err) => {
+                if (err) {
+                    console.error('Erro ao restaurar o banco:', err);
+                } else {
+                    console.log('Estrutura do banco verificada/restaurada com sucesso.');
+                }
+            });
         });
     });
     } else {
-    // If the database exists, just select it
-    connection.changeUser({ database: 'Listas' }, (err) => {
+        // If the database exists, just select it
+        connection.changeUser({ database: 'listas' }, (err) => {
+            if (err) {
+                console.error('Error selecting database:', err);
+                return;
+            }
+
+            console.log('Connected to the "listas" database');
+
+            executarSQLDump(path.join(__dirname, 'Listas.sql'), (err) => {
+                if (err) {
+                    console.error('Erro ao restaurar o banco:', err);
+                } else {
+                    console.log('Estrutura do banco verificada/restaurada com sucesso.');
+                }
+            });
+        });
+    }
+});
+});
+
+function executarSQLDump(caminhoSQL, callback) {
+    fs.readFile(caminhoSQL, 'utf8', (err, sql) => {
         if (err) {
-        console.error('Error selecting database: ' + err.stack);
-        return;
+            console.error('Erro ao ler o arquivo SQL:', err);
+            return callback(err);
         }
-        console.log('Connected to the "Listas" database');
-        ensureTablesExist(); // Check and create tables if necessary
-    });
-    }
-});
-});
 
-function ensureTablesExist() {
-const tables = [
-    {
-    name: 'Conta',
-    createQuery: `CREATE TABLE IF NOT EXISTS Conta (
-        ID_Conta INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(255) NOT NULL UNIQUE,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        password_hash VARCHAR(255) NOT NULL
-    )`
-    },
-    {
-    name: 'Lista',
-    createQuery: `CREATE TABLE IF NOT EXISTS Lista (
-        Id_Lista INT AUTO_INCREMENT PRIMARY KEY,
-        Nome_Lista VARCHAR(255) NOT NULL,
-        Conta INT,
-        FOREIGN KEY (Conta) REFERENCES Conta(ID_Conta)
-    )`
-    },
-    {
-    name: 'Linha',
-    createQuery: `CREATE TABLE IF NOT EXISTS Linha (
-        Id_Linha INT AUTO_INCREMENT PRIMARY KEY,
-        Lista INT,
-        Num INT NOT NULL,
-        FOREIGN KEY (Lista) REFERENCES Lista(Id_Lista)
-    )`
-    },
-    {
-    name: 'Coluna',
-    createQuery: `CREATE TABLE IF NOT EXISTS Coluna (
-        Id_Coluna INT AUTO_INCREMENT PRIMARY KEY,
-        Lista INT,
-        Nome_Coluna VARCHAR(255) NOT NULL,
-        FOREIGN KEY (Lista) REFERENCES Lista(Id_Lista)
-    )`
-    },
-    {
-    name: 'Info',
-    createQuery: `CREATE TABLE IF NOT EXISTS Info (
-        Id_Info INT AUTO_INCREMENT PRIMARY KEY,
-        Lin INT,
-        Col INT,
-        Dados TEXT,
-        FOREIGN KEY (Lin) REFERENCES Linha(Id_Linha),
-        FOREIGN KEY (Col) REFERENCES Coluna(Id_Coluna)
-    )`
-    }
-];
+        // Divide em múltiplos comandos para execução sequencial
+        const comandos = sql
+            .split(/;\s*(?=\n|$)/)
+            .map(cmd => cmd.trim())
+            .filter(cmd => cmd.length && !cmd.startsWith('--') && !cmd.startsWith('/*!'));
 
-tables.forEach(table => {
-    connection.query(table.createQuery, (err) => {
-    if (err) {
-        console.error(`Error creating table ${table.name}: ${err.stack}`);
-        return;
-    }
-    console.log(`Table ${table.name} is ready.`);
+        let exec = (i) => {
+            if (i >= comandos.length) return callback();
+
+            connection.query(comandos[i], (err) => {
+                if (err && err.code !== 'ER_TABLE_EXISTS_ERROR') {
+                    console.error('Erro executando comando SQL:', comandos[i], '\nErro:', err);
+                    return callback(err);
+                }
+                exec(i + 1);
+            });
+        };
+
+        exec(0);
     });
-});
 }
 
 app.use(express.json());                      // for JSON bodies
@@ -148,7 +131,7 @@ app.use(express.urlencoded({ extended: true })); // for HTML form submissions
 // Register endpoint
 app.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
-    if (!username || !email || !password) return res.status(400).json({ message: 'Username, email and password required' });
+    if (!username || !email || !password) return res.status(400).json({ message: 'Requer username, email e senha' });
 
     try {
         const saltRounds = 15;
@@ -160,26 +143,149 @@ app.post('/register', async (req, res) => {
             (err, result) => {
                 if (err) {
                     if (err.code === 'ER_DUP_ENTRY') {
-                        return res.status(409).json({ message: 'Username or email already exists' });
+                        return res.status(409).json({ message: 'Username ou email ja existem' });
                     }
                     return res.status(500).json({ message: 'Database error', error: err });
                 }
-                res.status(201).json({ message: 'User registered successfully' });
+                res.status(201).json({ message: 'Usuário registrado com sucesso' });
             }
         );
     } catch (err) {
-        res.status(500).json({ message: 'Error registering user', error: err });
+        res.status(500).json({ message: 'Erro ao registrar usuário', error: err });
     }
 });
 
-// Login endpoint
-const jwtSecret = process.env.JWT_SECRET || 'InventSoftware1';  // Environment variable for added security
+app.put('/updatePassword', authenticateToken, async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.id;
 
-// Login endpoint
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ message: 'Ambas as senhas são necessárias' });
+    }
+
+    connection.query(
+        'SELECT password_hash FROM Conta WHERE ID_Conta = ?',
+        [userId],
+        async (err, results) => {
+            if (err) return res.status(500).json({ message: 'Erro no banco de dados' });
+
+            if (results.length === 0) {
+                return res.status(404).json({ message: 'Usuário não encontrado' });
+            }
+
+            const match = await bcrypt.compare(oldPassword, results[0].password_hash);
+            if (!match) return res.status(401).json({ message: 'Senha atual incorreta' });
+
+            const hashedNewPassword = await bcrypt.hash(newPassword, 15);
+
+            connection.query(
+                'UPDATE Conta SET password_hash = ? WHERE ID_Conta = ?',
+                [hashedNewPassword, userId],
+                (err, result) => {
+                    if (err) return res.status(500).json({ message: 'Erro ao atualizar a senha' });
+                    res.json({ message: 'Senha atualizada com sucesso' });
+                }
+            );
+        }
+    );
+});
+
+app.put('/updateUsername', authenticateToken, (req, res) => {
+    const { novoNome } = req.body;
+    const userId = req.user.id;
+
+    if (!novoNome) return res.status(400).json({ message: 'Nome inválido' });
+
+    const sql = 'UPDATE conta SET Username = ? WHERE ID_Conta = ?';
+
+    connection.query(sql, [novoNome, userId], (err, result) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(409).json({ message: 'Nome de usuário já em uso' });
+            }
+            console.error(err);
+            return res.status(500).json({ message: 'Erro ao atualizar nome' });
+        }
+        res.json({ message: 'Nome atualizado com sucesso' });
+    });
+});
+
+app.put('/updateEmail', authenticateToken, (req, res) => {
+    const { novoEmail } = req.body;
+    const userId = req.user.id;
+
+    if (!novoEmail) return res.status(400).json({ message: 'Email inválido' });
+
+    const sql = 'UPDATE conta SET email = ? WHERE ID_Conta = ?';
+
+    connection.query(sql, [novoEmail, userId], (err, result) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(409).json({ message: 'Email já está em uso' });
+            }
+            console.error(err);
+            return res.status(500).json({ message: 'Erro ao atualizar email' });
+        }
+        res.json({ message: 'Email atualizado com sucesso' });
+    });
+});
+
+app.delete('/deleteAccount', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    connection.query('DELETE FROM Conta WHERE ID_Conta = ?', [userId], (err) => {
+        if (err) return res.status(500).json({ message: 'Erro ao excluir conta' });
+        res.json({ message: 'Conta excluída com sucesso' });
+    });
+});
+
+// Contar listas e pastas do usuário
+app.get('/contarItens', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    const queryListas = 'SELECT COUNT(*) AS totalListas FROM Lista WHERE Conta = ?';
+    const queryPastas = 'SELECT COUNT(*) AS totalPastas FROM Pasta WHERE Conta = ?';
+
+    connection.query(queryListas, [userId], (err, resultListas) => {
+        if (err) return res.status(500).json({ message: 'Erro ao contar listas' });
+
+        connection.query(queryPastas, [userId], (err, resultPastas) => {
+            if (err) return res.status(500).json({ message: 'Erro ao contar pastas' });
+
+            res.json({
+                totalListas: resultListas[0].totalListas,
+                totalPastas: resultPastas[0].totalPastas
+            });
+        });
+    });
+});
+
+// Deletar todas as listas do usuário
+app.delete('/apagarTodasListas', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    connection.query('DELETE FROM Lista WHERE Conta = ?', [userId], (err, result) => {
+        if (err) return res.status(500).json({ message: 'Erro ao apagar listas' });
+        res.json({ message: 'Todas as listas foram apagadas com sucesso' });
+    });
+});
+
+// Deletar todas as pastas do usuário
+app.delete('/apagarTodasPastas', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    connection.query('DELETE FROM Pasta WHERE Conta = ?', [userId], (err, result) => {
+        if (err) return res.status(500).json({ message: 'Erro ao apagar pastas' });
+        res.json({ message: 'Todas as pastas foram apagadas com sucesso' });
+    });
+});
+
+const jwtSecret = process.env.JWT_SECRET || 'InventSoftware1';
+
 app.post('/login', async (req, res) => {
     const { account, password } = req.body;
     if (!account || !password) {
-        return res.status(400).json({ message: 'Email/Username and password required' });
+        return res.status(400).json({ message: 'Email ou nome de usuário e senha são obrigatórios' });
     }
 
     connection.query(
@@ -189,7 +295,7 @@ app.post('/login', async (req, res) => {
             if (err) return res.status(500).json({ message: 'Database error', error: err });
 
             if (results.length === 0) {
-                return res.status(401).json({ message: 'Invalid credentials' });
+                return res.status(401).json({ message: 'Credenciais incorretas' });
             }
 
             const user = results[0];
@@ -197,7 +303,7 @@ app.post('/login', async (req, res) => {
 
             const passwordMatch = await bcrypt.compare(password, user.Password_Hash);
             if (!passwordMatch) {
-                return res.status(401).json({ message: 'Invalid credentials' });
+                return res.status(401).json({ message: 'Credenciais incorretas' });
             }
 
             const token = jwt.sign(
@@ -206,7 +312,7 @@ app.post('/login', async (req, res) => {
                 { expiresIn: '1h' }
             );
 
-            res.json({ message: 'Logged in successfully', token, id: user.ID_Conta });
+            res.json({ message: 'Sucesso no Login', token, id: user.ID_Conta });
         }
     );
 });
@@ -235,7 +341,7 @@ app.get('/getLists', authenticateToken, (req, res) => {
     connection.query('SELECT * FROM Lista WHERE Conta = ?', [ID_Conta], (err, results) => {
         if (err) {
             console.log(err);
-            res.status(500).send('Error retrieving data');
+            res.status(500).send('Erro obtendo dados');
         } else {
             res.json(results);  // Send results as JSON
         }
@@ -252,7 +358,7 @@ app.get('/getListsInFolder', authenticateToken, (req, res) => {
     connection.query('SELECT * FROM Lista WHERE Pasta = ?', [ID_Pasta], (err, results) => {
         if (err) {
             console.log(err);
-            res.status(500).send('Error retrieving data');
+            res.status(404).send('List not found');
         } else {
             res.json(results);  // Send results as JSON
         }
@@ -272,13 +378,34 @@ app.get('/getFolders', authenticateToken, (req, res) => {
         (err, results) => {
             if (err) {
                 console.log(err);
-                res.status(500).send('Error retrieving data');
+                res.status(404).send('List not found');
             } else {
                 res.json(results);
             }
         }
     );
 });
+
+app.get('/getAccount', authenticateToken, (req, res) => {
+    const ID_Conta = req.query.ID_Conta;
+
+    if (!ID_Conta) {
+        return res.status(400).json({ message: 'User ID required' });
+    }
+
+    connection.query(
+        'SELECT * FROM Conta WHERE ID_Conta = ?',
+        [ID_Conta],
+        (err, results) => {
+            if (err) {
+                console.log(err);
+                res.status(404).send('List not found');
+            } else {
+                res.json(results);
+            }
+        }
+    );
+})
 
 app.post('/createFolder', authenticateToken, (req, res) => {
     const { nome } = req.body;
@@ -317,7 +444,7 @@ app.get('/getListName', authenticateToken, (req, res) => {
             if (results.length > 0) {
                 res.json({ Nome_Lista: results[0].Nome_Lista });  // Send the list name as JSON
             } else {
-                res.status(404).send('List not found');
+                res.status(404).send('Lista não encontrada');
             }
         }
     });
@@ -480,7 +607,7 @@ app.post('/createList', authenticateToken, (req, res) => {
     const ID_Conta = req.user.id;  // Use 'id' instead of 'user_ID' from the token
 
     if (!nome) {
-        return res.status(400).json({ message: 'List name is required' });
+        return res.status(400).json({ message: 'Nome da lista é obrigatório' });
     }
 
     // Insert list into the database, linking it to the current user's account
@@ -492,7 +619,7 @@ app.post('/createList', authenticateToken, (req, res) => {
                 console.log(err);
                 return res.status(500).json({ message: 'Database error', error: err });
             }
-            res.status(201).json({ message: 'List created successfully' });
+            res.status(201).json({ message: 'Lista criada com sucesso' });
         }
     );
 });
@@ -501,7 +628,7 @@ app.post('/createListInFolder', authenticateToken, (req, res) => {
     const { nome, id_pasta } = req.body;
 
     if (!nome || !id_pasta) {
-        return res.status(400).json({ message: 'List name and folder ID are required' });
+        return res.status(400).json({ message: 'Nome da lista e ID da pasta são obrigatórios' });
     }
 
     // Primeiro, buscar o ID da conta a que a pasta pertence
@@ -768,7 +895,7 @@ app.post('/updateData', authenticateToken, (req, res) => {
     const { id, newData } = req.body;
 
     if (!id || newData === undefined) {
-        return res.status(400).json({ success: false, message: 'ID and new data are required' });
+        return res.status(400).json({ success: false, message: 'ID e novo dado são obrigatórios' });
     }
 
     const query = 'UPDATE Info SET Dados = ? WHERE Id_Info = ?';
@@ -882,7 +1009,7 @@ app.post('/newColumn', authenticateToken, (req, res) => {
     connection.query(query, [newData, lista], (err, result) => {
         if (err) {
             console.error('Error updating column name:', err);
-            return res.status(500).json({ success: false, message: 'Database error' });
+            return res.status(500).json({ success: false, message: 'Erro no banco de dados' });
         }
 
         // Return the new column data using the insertId
@@ -900,7 +1027,7 @@ app.post('/newRow', authenticateToken, (req, res) => {
     const listaId = req.body.lista;
 
     if (!listaId) {
-        return res.status(400).json({ success: false, message: 'Missing lista ID' });
+        return res.status(400).json({ success: false, message: 'ID da lista é obrigatório' });
     }
 
     // Find the highest Num for the given Lista

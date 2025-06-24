@@ -9,7 +9,14 @@
 </head>
 <body>
     <header>
-        <a href="index.html"><div id="HomeCircle"><img src="img/InvSoftIcon.png" alt="Icon"></div></a>
+        <a href="index.html">
+            <div id="HomeCircle">
+                <img src="img/InvSoftIcon.png" alt="Icon">
+            </div>
+        </a>
+        <div id="perfil">
+            <img src="img/account.png" alt="Perfil">
+        </div>
     </header>
 
     <h1 id="titulo">Pastas</h1>
@@ -39,6 +46,10 @@
 
         document.getElementById('add').addEventListener('click', () => {
             createPasta(ID_Conta);
+        });
+
+        document.getElementById('perfil').addEventListener('click', () => {
+            window.location.href = `Conta.html?user_id=${ID_Conta}`;
         });
     };
 

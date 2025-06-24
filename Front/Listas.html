@@ -146,14 +146,13 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.message === 'Lista criada com sucesso') {
+            if (data.success || data.message === 'Lista criada com sucesso') {
                 alert('Lista criada com sucesso!');
                 fetchListas(ID_Conta); // Reload lists after creation
             } else {
                 alert('Erro criando lista: ' + data.message);
             }
         })
-        .catch(error => console.error('Error criando lista:', error));
     }
 </script>
 

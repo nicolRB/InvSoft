@@ -38,7 +38,7 @@ CREATE TABLE `coluna` (
 
 LOCK TABLES `coluna` WRITE;
 /*!40000 ALTER TABLE `coluna` DISABLE KEYS */;
-INSERT INTO `coluna` VALUES (4,'Coluna 1',5),(5,'Coluna 2',5),(6,'Coluna 3',5);
+INSERT IGNORE INTO `coluna` VALUES (4,'Coluna 1',5),(5,'Coluna 2',5),(6,'Coluna 3',5);
 /*!40000 ALTER TABLE `coluna` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -49,17 +49,17 @@ UNLOCK TABLES;
 /*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
+
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 trigger nova_coluna
 AFTER INSERT ON coluna
 FOR EACH ROW
 BEGIN
-    INSERT INTO info (Dados, Lin, Col)
+    INSERT IGNORE INTO info (Dados, Lin, Col)
 SELECT NULL, Id_Linha, NEW.Id_Coluna
     FROM linha
     WHERE Lista = NEW.Lista;
 END */;;
-DELIMITER ;
+
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
@@ -120,7 +120,7 @@ CREATE TABLE `info` (
 
 LOCK TABLES `info` WRITE;
 /*!40000 ALTER TABLE `info` DISABLE KEYS */;
-INSERT INTO `info` VALUES (4,'1',2,4),(5,'2',2,5),(6,NULL,2,6);
+INSERT IGNORE INTO `info` VALUES (4,'1',2,4),(5,'2',2,5),(6,NULL,2,6);
 /*!40000 ALTER TABLE `info` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -147,7 +147,7 @@ CREATE TABLE `linha` (
 
 LOCK TABLES `linha` WRITE;
 /*!40000 ALTER TABLE `linha` DISABLE KEYS */;
-INSERT INTO `linha` VALUES (2,1,5);
+INSERT IGNORE INTO `linha` VALUES (2,1,5);
 /*!40000 ALTER TABLE `linha` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -158,17 +158,17 @@ UNLOCK TABLES;
 /*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
+
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER nova_linha
 after insert on linha
 FOR EACH ROW
 BEGIN
-    INSERT INTO info (Dados, Lin, Col)
+    INSERT IGNORE INTO info (Dados, Lin, Col)
 SELECT NULL, NEW.Id_Linha, Id_Coluna
 from coluna
 where lista = new.lista;
 end */;;
-DELIMITER ;
+
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
@@ -201,7 +201,7 @@ CREATE TABLE `lista` (
 
 LOCK TABLES `lista` WRITE;
 /*!40000 ALTER TABLE `lista` DISABLE KEYS */;
-INSERT INTO `lista` VALUES (5,'Teste',NULL);
+INSERT IGNORE INTO `lista` VALUES (5,'Teste',NULL);
 /*!40000 ALTER TABLE `lista` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -212,21 +212,21 @@ UNLOCK TABLES;
 /*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
+
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER nova_lista 
 AFTER INSERT ON lista 
 FOR EACH ROW
 BEGIN
-    INSERT INTO linha (Num, Lista) 
+    INSERT IGNORE INTO linha (Num, Lista) 
     VALUES (1, NEW.Id_Lista);
 
-    INSERT INTO coluna (Nome_Coluna, Lista) 
+    INSERT IGNORE INTO coluna (Nome_Coluna, Lista) 
     VALUES 
         ('Coluna 1', NEW.Id_Lista),
         ('Coluna 2', NEW.Id_Lista),
         ('Coluna 3', NEW.Id_Lista);
 END */;;
-DELIMITER ;
+
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
